@@ -418,8 +418,6 @@ function Button:SetCallIndicators()
 		end		
 		
 		if (Yata.Bar) then
-			local currentIndex = Yata.Bar:GetAttribute("currentcallindex")
-										
 			local actionBase = Yata:GetMultiCastActionBase()
 				
 			for k = 1, #TOTEM_MULTI_CAST_SUMMON_SPELLS do
@@ -435,12 +433,6 @@ function Button:SetCallIndicators()
 						self.CallFrame:Show()
 					end
 				end
-			end
-			
-			local setcallbutton = Yata.CurrentDb.ButtonSetCallKey
-			local prefix = ""
-			if(setcallbutton ~= "none") then
-				prefix = setcallbutton.."-"
 			end
 		end
 	end

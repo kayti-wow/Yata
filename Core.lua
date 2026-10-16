@@ -5,7 +5,6 @@ if select(2, UnitClass('player')) ~= "SHAMAN" then
 end
 
 local Yata = LibStub("AceAddon-3.0"):NewAddon("Yata", "AceConsole-3.0", "AceEvent-3.0")
-local L = LibStub("AceLocale-3.0"):GetLocale("Yata")
 local LibKeyBound = LibStub("LibKeyBound-1.0")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 

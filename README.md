@@ -139,6 +139,12 @@ Some user-facing strings are still hard-coded in English and do not go through t
 
 There is no build step. `Tests/` has offline tests that run under Lua 5.1 or LuaJIT (the game's Lua version) against mocked WoW APIs. Run them with `lua5.1 Tests/run.lua` from the repository root. They check the totem duration bars in and out of combat, compile every secure snippet, run the bar's call-indicator snippet, and load each locale as a client in that locale would. They can't replace the game client, so also test a change by copying the folder into the AddOns directory and running `/reload` in game. Lua errors are easiest to see with an error-display addon such as BugSack, or with `/console scriptErrors 1`. Blizzard's UI source for each client flavour is published on the `forever`, `live` and other branches of the wow-ui-source mirror, and `Blizzard_APIDocumentationGenerated` in that source is the best API reference.
 
+Run `luacheck .` from the repository root to lint the code; `.luacheckrc` lists the WoW globals it may use and skips `Libs/`.
+
+`.github/workflows/build.yml` runs luacheck and the tests on every push and pull request. Pushing a tag also runs the [BigWigsMods packager](https://github.com/BigWigsMods/packager) (configured in `.pkgmeta`), which builds `Yata-<tag>-forever.zip`, creates a GitHub release and uploads it to CurseForge and Wago. Each upload needs a repository secret (`CF_API_TOKEN`, `WAGO_API_TOKEN`) and a project ID in `Yata.toc` (a numeric `## X-Curse-Project-ID:` and `## X-Wago-ID:`), and is skipped if either is missing.
+
+The `## Version:` line in `Yata.toc` is `@project-version@`, which the packager replaces with the tag name, so a copy installed straight from git shows that placeholder as its version.
+
 Known issues:
 
 - The Forever port hasn't been tested in game yet. `/yata debug` output from a real client is the quickest way to confirm that the multicast slots and Call spells match what the code expects.

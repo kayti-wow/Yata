@@ -1,0 +1,10 @@
+# BigWigsMods packager configuration (https://github.com/BigWigsMods/packager)
+package-as: Yata
+
+# The libraries are committed to Libs/, so there are no externals to fetch
+# and no separate no-lib package
+enable-nolib-creation: no
+
+ignore:
+  - Tests
+  - README.md

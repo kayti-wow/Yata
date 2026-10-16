@@ -326,7 +326,7 @@ function TotemBar:LoadPosition()
 	if Yata.CurrentDb.Locked then
 		self.Texture:Hide()
 	end	
-	local x,y,scale
+	local x,y
 	if Yata.CurrentDb.BarPosition then
 		x = Yata.CurrentDb.BarPosition.x
 		y = Yata.CurrentDb.BarPosition.y
@@ -499,7 +499,7 @@ local MAX_CHARACTER_MACRO_COUNT = MAX_CHARACTER_MACROS
 
 function TotemBar:EditMacro(force, old, new)
 	if Yata.CurrentDb.MacroEnabled == true and not InCombatLockdown() then
-		local numGlobal, numLocal = GetNumMacros()
+		local _, numLocal = GetNumMacros()
 		local macroindex = GetMacroIndexByName(MACRO_NAME)
 		local hasRoom = numLocal < MAX_CHARACTER_MACRO_COUNT
 		if force or (macroindex == 0 and hasRoom) then
