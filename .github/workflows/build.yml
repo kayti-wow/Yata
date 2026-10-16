@@ -35,8 +35,9 @@ jobs:
         run: lua5.1 Tests/run.lua
 
   release:
-    # Package and publish only for tags, once lint and tests pass
-    if: startsWith(github.ref, 'refs/tags/')
+    # Tags publish a release, or a beta when the tag contains "-". Untagged
+    # pushes to main publish an alpha to CurseForge and Wago only
+    if: github.event_name == 'push' && (startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main')
     needs: [lint, test]
     runs-on: ubuntu-latest
     permissions:
@@ -46,17 +47,63 @@ jobs:
       # a numeric "## X-Curse-Project-ID:" in Yata.toc, and Wago needs "## X-Wago-ID:".
       CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
       WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
-      GH_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Alphas never go to GitHub Releases. The packager already skips GitHub
+      # without a tag, and leaving the token unset makes sure of it
+      GH_API_TOKEN: ${{ startsWith(github.ref, 'refs/tags/') && secrets.GITHUB_TOKEN || '' }}
+      # BigWigsMods/packager v2, pinned so the patch below applies to a known release.sh
+      PACKAGER_REF: e50a250f8705041e40f2fa1ddcb280a686d65aa0
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # the packager builds the changelog from git history
 
+      - name: Work out the release type and version
+        id: build
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            if [[ $GITHUB_REF_NAME == *-* ]]; then
+              echo "type=beta" >> "$GITHUB_OUTPUT"
+            else
+              echo "type=release" >> "$GITHUB_OUTPUT"
+            fi
+            echo "version=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          elif [[ -n $(git tag --points-at HEAD) ]]; then
+            # The tag's own run publishes this commit
+            echo "Skipping the alpha because HEAD is tagged"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            # Base the version on the latest release tag, skipping beta tags (those with "-")
+            last_tag=$(git describe --tags --abbrev=0 --exclude='*-*' 2>/dev/null || echo 0.0.0)
+            echo "type=alpha" >> "$GITHUB_OUTPUT"
+            echo "version=$last_tag-$(git rev-parse --short=7 HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fetch and patch the packager
+        if: steps.build.outputs.skip != 'true'
+        run: |
+          curl -fsSL "https://raw.githubusercontent.com/BigWigsMods/packager/$PACKAGER_REF/release.sh" -o "$RUNNER_TEMP/release.sh"
+          # release.sh takes the version and release type from git and has no
+          # options to override them, so add overrides after it sets each one
+          sed -i \
+            -e '/^project_version=\$si_project_version$/a if [[ -n $YATA_VERSION ]]; then project_version=$YATA_VERSION; si_project_version=$YATA_VERSION; fi' \
+            -e '/^# Add some GitHub Actions outputs$/i if [[ -n $YATA_RELEASE_TYPE ]]; then file_type=$YATA_RELEASE_TYPE; fi' \
+            "$RUNNER_TEMP/release.sh"
+          if [[ $(grep -c 'YATA_' "$RUNNER_TEMP/release.sh") -ne 2 ]]; then
+            echo "::error::release.sh has changed and the overrides no longer apply"
+            exit 1
+          fi
+
       - name: Package and publish
-        uses: BigWigsMods/packager@v2
+        if: steps.build.outputs.skip != 'true'
+        env:
+          YATA_RELEASE_TYPE: ${{ steps.build.outputs.type }}
+          # Tags keep the packager's own version, which is the tag name
+          YATA_VERSION: ${{ steps.build.outputs.type == 'alpha' && steps.build.outputs.version || '' }}
+        run: bash "$RUNNER_TEMP/release.sh"
 
       - name: Upload zip as a workflow artifact
+        if: steps.build.outputs.skip != 'true'
         uses: actions/upload-artifact@v7
         with:
-          name: Yata-${{ github.ref_name }}
+          name: Yata-${{ steps.build.outputs.version }}
           path: .release/*.zip
