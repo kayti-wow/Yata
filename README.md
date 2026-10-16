@@ -9,6 +9,10 @@ A World of Warcraft addon that replaces the Blizzard multicast totem bar for Sha
 
 Forever keeps the Cataclysm multicast totem bar (`GetMultiCastTotemSpells`, `TOTEM_MULTI_CAST_SUMMON_SPELLS`, `MultiCastActionBarFrame`), so Yata's bar design carries over unchanged. Everything else was updated to the modern API: `C_Spell`, duration objects for timers, Edit Mode, and the current macro functions. The port was written against Blizzard's Forever UI source and has not yet been tested in game.
 
+## AI usage
+
+This README and the WoW Forever port (5.0.0-forever) were developed with Claude, Anthropic's AI model. That covers the code changes for Forever, the bug fixes since, and the offline tests in `Tests/`. The commits involved say so in their message or carry a `Co-Authored-By: Claude` trailer. The original addon, up to 4.7.5 (2011), is the work of Tornhoof and Kaytikat. The AI-assisted changes were checked against Blizzard's Forever UI source and with the offline tests, but haven't been tested in game yet.
+
 ## Installation
 
 Copy the repository folder into `World of Warcraft/Interface/AddOns/` and name the folder `Yata`, so that `Yata.toc` is at `Interface/AddOns/Yata/Yata.toc`. All the libraries it needs are bundled in `Libs/`.
