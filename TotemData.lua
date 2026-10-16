@@ -1,6 +1,11 @@
-﻿if select(2, UnitClass('player')) ~= "SHAMAN" then
+﻿local _, ns = ...
+
+if select(2, UnitClass('player')) ~= "SHAMAN" then
 	return
 end
+
+local Yata = ns.Yata
+local SPELL_GROUP_CALL, SPELL_GROUP_IMBUE = ns.SPELL_GROUP_CALL, ns.SPELL_GROUP_IMBUE
 
 local BlizzardCallSpells = TOTEM_MULTI_CAST_SUMMON_SPELLS
 
@@ -23,10 +28,18 @@ local WeaponImbues =
 -- These are the rank 1 ids, checked against Wowhead's Forever database. All
 -- ranks share a name, so GetKnownSpell resolves them to the highest rank known.
 
+-- Where the multicast bar has always lived, for when the client can't tell us
+-- (early in login, or before the player has the bar)
+local DEFAULT_MULTICAST_ACTION_BASE = 132
+
 -- First action slot of the multicast bar, minus one. Each Call spell owns a
 -- page of four slots (one per element) starting here.
 function Yata:GetMultiCastActionBase()
-	return (C_ActionBar.GetMultiCastBarIndex() - 1) * NUM_ACTIONBAR_BUTTONS
+	local index = C_ActionBar.GetMultiCastBarIndex and C_ActionBar.GetMultiCastBarIndex()
+	if not index or index < 1 then
+		return DEFAULT_MULTICAST_ACTION_BASE
+	end
+	return (index - 1) * NUM_ACTIONBAR_BUTTONS
 end
 
 -- Returns the name, icon and spell id of the highest rank of a spell the

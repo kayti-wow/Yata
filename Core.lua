@@ -1,19 +1,32 @@
-﻿if select(2, UnitClass('player')) ~= "SHAMAN" then
+﻿local _, ns = ...
+
+if select(2, UnitClass('player')) ~= "SHAMAN" then
 	return
 end
 
-Yata = LibStub("AceAddon-3.0"):NewAddon("Yata", "AceConsole-3.0", "AceEvent-3.0")
+local Yata = LibStub("AceAddon-3.0"):NewAddon("Yata", "AceConsole-3.0", "AceEvent-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("Yata")
 local LibKeyBound = LibStub("LibKeyBound-1.0")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 
-TOTEM_SET_PRIMARY_DEFAULT = "Default"
-TOTEM_SET_SECONDARY_DEFAULT = "Secondary Default"
-SPELL_GROUP_CALL = "CallSpell"
-SPELL_GROUP_IMBUE = "Imbue"
+ns.Yata = Yata
 
-SpellGroups = {"Earth", "Air", "Water", "Fire", SPELL_GROUP_CALL, SPELL_GROUP_IMBUE}
-ElementsMap = {["Fire"] = FIRE_TOTEM_SLOT, ["Earth"] = EARTH_TOTEM_SLOT, ["Water"] = WATER_TOTEM_SLOT, ["Air"] = AIR_TOTEM_SLOT}
+-- Shared with the other files through the addon namespace rather than globals,
+-- so other addons can't overwrite them
+local TOTEM_SET_PRIMARY_DEFAULT = "Default"
+local TOTEM_SET_SECONDARY_DEFAULT = "Secondary Default"
+local SPELL_GROUP_CALL = "CallSpell"
+local SPELL_GROUP_IMBUE = "Imbue"
+
+local SpellGroups = {"Earth", "Air", "Water", "Fire", SPELL_GROUP_CALL, SPELL_GROUP_IMBUE}
+local ElementsMap = {["Fire"] = FIRE_TOTEM_SLOT, ["Earth"] = EARTH_TOTEM_SLOT, ["Water"] = WATER_TOTEM_SLOT, ["Air"] = AIR_TOTEM_SLOT}
+
+ns.TOTEM_SET_PRIMARY_DEFAULT = TOTEM_SET_PRIMARY_DEFAULT
+ns.TOTEM_SET_SECONDARY_DEFAULT = TOTEM_SET_SECONDARY_DEFAULT
+ns.SPELL_GROUP_CALL = SPELL_GROUP_CALL
+ns.SPELL_GROUP_IMBUE = SPELL_GROUP_IMBUE
+ns.SpellGroups = SpellGroups
+ns.ElementsMap = ElementsMap
 
 local defaults = {
 	profile = {
@@ -136,7 +149,7 @@ function Yata:OnEnable()
 
 	local firstUse = self:SetActiveTalentProfile()
 
-	self.Bar = TotemBar:Create()
+	self.Bar = ns.TotemBar:Create()
 	self.Bar:UpdateCallIndicators()
 
 	self:RegisterEvent("LEARNED_SPELL_IN_SKILL_LINE", "SpellLearned")
@@ -159,18 +172,35 @@ function Yata:OnDisable()
 end
 
 -- The Blizzard totem bar is managed by Edit Mode, so rather than driving its
--- visibility we hide it by moving it under a hidden parent.
+-- visibility we hide it by moving it under a hidden parent, and put it back
+-- under its original parent to show it.
 local hiddenParent = CreateFrame("Frame")
 hiddenParent:Hide()
+local originalParent
+
+-- Reparenting a protected frame isn't allowed in combat, so retry afterwards.
+-- This uses its own frame because Reload owns our PLAYER_REGEN_ENABLED handler.
+hiddenParent:SetScript("OnEvent", function(frame)
+	frame:UnregisterEvent("PLAYER_REGEN_ENABLED")
+	Yata:UpdateBlizzardBar()
+end)
 
 function Yata:UpdateBlizzardBar()
 	local frame = MultiCastActionBarFrame
-	if not frame or InCombatLockdown() then
+	if not frame then
+		return
+	end
+	if InCombatLockdown() then
+		hiddenParent:RegisterEvent("PLAYER_REGEN_ENABLED")
 		return
 	end
 
+	if frame:GetParent() ~= hiddenParent then
+		originalParent = frame:GetParent()
+	end
+
 	if self.CurrentDb.AdvancedEnabled and self.CurrentDb.AdvShowBlizzBar then
-		frame:SetParent(UIParent)
+		frame:SetParent(originalParent or UIParent)
 	else
 		frame:SetParent(hiddenParent)
 	end
@@ -259,8 +289,8 @@ end
 function Yata:PrintDebugInfo()
 	local version, build, _, interface = GetBuildInfo()
 	self:Print(format("Client %s (%s), interface %s", version, build, interface))
-	self:Print(format("Multicast bar index %d, action base %d",
-		C_ActionBar.GetMultiCastBarIndex(), self:GetMultiCastActionBase()))
+	self:Print(format("Multicast bar index %s, action base %d",
+		tostring(C_ActionBar.GetMultiCastBarIndex()), self:GetMultiCastActionBase()))
 
 	for element, slot in pairs(ElementsMap) do
 		local names = {}

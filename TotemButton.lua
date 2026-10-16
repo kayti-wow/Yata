@@ -1,6 +1,12 @@
+local _, ns = ...
+
 if select(2, UnitClass('player')) ~= "SHAMAN" then
 	return
 end
+
+local Yata = ns.Yata
+local SpellGroups, ElementsMap = ns.SpellGroups, ns.ElementsMap
+local SPELL_GROUP_CALL, SPELL_GROUP_IMBUE = ns.SPELL_GROUP_CALL, ns.SPELL_GROUP_IMBUE
 
 local _G = _G
 local LibKeyBound = LibStub("LibKeyBound-1.0")
@@ -77,19 +83,9 @@ function Yata.Button:Create(id, parent, totem)
 	if(totem.ActionId) then
 		button.CallFrame = button.CallFrame or CreateFrame("Frame", button.Name.."CallFrame", button)
 		
-		local callY, frameY
+		local callY = 5
 		
-		if not Masque then
-			button.CallFrame:SetHeight(7)
-			callY = 5
-			frameY = 3
-		else
-			button.CallFrame:SetHeight(5)
-			callY=5
-			frameY= 4
-		end
-		
-		button.CallFrame:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 2, frameY)
+		button:LayoutCallFrame(not Masque)
 		button.CallFrame:SetWidth(32)
 		
 		if not (button.CallFrame.texture) then
@@ -393,6 +389,21 @@ function Button:SPELL_UPDATE_USABLE()
 	end
 
 	self:SetCallIndicators()
+end
+
+-- The default button art needs a taller backing behind the call indicators
+function Button:LayoutCallFrame(defaultSkin)
+	if not self.CallFrame then
+		return
+	end
+	self.CallFrame:ClearAllPoints()
+	if defaultSkin then
+		self.CallFrame:SetHeight(7)
+		self.CallFrame:SetPoint("BOTTOMLEFT", self, "BOTTOMLEFT", 2, 3)
+	else
+		self.CallFrame:SetHeight(5)
+		self.CallFrame:SetPoint("BOTTOMLEFT", self, "BOTTOMLEFT", 2, 4)
+	end
 end
 
 function Button:SetCallIndicators()

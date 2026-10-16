@@ -1,6 +1,10 @@
+local _, ns = ...
+
 if select(2, UnitClass('player')) ~= "SHAMAN" then
 	return
 end
+
+local Yata = ns.Yata
 
 local LSM = LibStub("LibSharedMedia-3.0",true)
 local LDB = LibStub("LibDataBroker-1.1", true)

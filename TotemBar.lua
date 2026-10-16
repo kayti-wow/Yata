@@ -1,9 +1,16 @@
+local _, ns = ...
+
 if select(2, UnitClass('player')) ~= "SHAMAN" then
 	return
 end
 
-TotemBar = CreateFrame("Frame")
+local Yata = ns.Yata
+local SpellGroups = ns.SpellGroups
+local SPELL_GROUP_CALL, SPELL_GROUP_IMBUE = ns.SPELL_GROUP_CALL, ns.SPELL_GROUP_IMBUE
+
+local TotemBar = CreateFrame("Frame")
 TotemBar.__index = TotemBar
+ns.TotemBar = TotemBar
 
 local Masque = LibStub("Masque", true)
 	
@@ -28,7 +35,7 @@ function TotemBar:New()
 	for k, spellgroup in ipairs(self.Set["GroupOrder"]) do
 		
 		-- Create the header and proxy for the group
-		local header = Header:Create(spellgroup, self)
+		local header = ns.Header:Create(spellgroup, self)
 		header:Show()
 		header:SetParent(self)
 		self.Groups[spellgroup].Header = header
@@ -244,6 +251,13 @@ function TotemBar:Init()
 	
 	if Masque then
 		self.MasqueGroup = Masque:Group("Yata")
+		-- Re-layout when the skin is changed or Masque is toggled for our group
+		local onSkinChanged = function() self:SkinChanged() end
+		if self.MasqueGroup.RegisterCallback then
+			self.MasqueGroup:RegisterCallback(onSkinChanged)
+		elseif self.MasqueGroup.SetCallback then
+			self.MasqueGroup:SetCallback(onSkinChanged)
+		end
 	end
 	
 	self:RegisterEvent("UPDATE_MULTI_CAST_ACTIONBAR")
@@ -277,7 +291,18 @@ end
 
 -- Blizzard's default button art needs a little extra room between buttons
 function TotemBar:UsesDefaultSkin()
-	return self.MasqueGroup == nil
+	local group = self.MasqueGroup
+	return group == nil or (group.db ~= nil and group.db.Disabled == true)
+end
+
+function TotemBar:SkinChanged()
+	-- Laying out the bar sets attributes on secure headers
+	if InCombatLockdown() then
+		self.layoutPending = true
+		return
+	end
+	self.layoutPending = nil
+	self:ConfigureBarDisplay()
 end
 
 function TotemBar:SetManualSwapToCallKey(key)
@@ -355,7 +380,8 @@ function TotemBar:ConfigureBarDisplay(gapValue, orientationValue, visibleValue)
 	Yata.CurrentDb.BarOrientation = orientationValue
 	Yata.CurrentDb.VisibleButtons = visibleValue
 	
-	if self:UsesDefaultSkin() then
+	local defaultSkin = self:UsesDefaultSkin()
+	if defaultSkin then
 		gapValue = gapValue + 4
 	end
 	
@@ -383,11 +409,12 @@ function TotemBar:ConfigureBarDisplay(gapValue, orientationValue, visibleValue)
 	self:PositionButtons()
 
 	for k,v in ipairs(self.Groups.All) do
-		 if self:UsesDefaultSkin() then
+		 if defaultSkin then
 			v.Duration:SetPoint("TOP",v.Parent,"BOTTOM",0,-4)
 		 else
 			v.Duration:SetPoint("TOP",v.Parent,"BOTTOM",0,0)
 		end
+		v:LayoutCallFrame(defaultSkin)
 	end
 		
 	self:ApplyTotemSet()
@@ -453,6 +480,10 @@ end
 
 function TotemBar:OnEvent(event, ...)
 	if event == "PLAYER_REGEN_ENABLED" then
+		if self.layoutPending then
+			self:SkinChanged()
+		end
+		Yata:RefreshTotemSlots()
 		self:EditMacro(true, nil, nil)
 	elseif event == "UPDATE_MULTI_CAST_ACTIONBAR" then
 		self:UpdateCallIndicators()
@@ -461,12 +492,15 @@ end
 
 local MACRO_NAME = "YataTotemStomp"
 local MACRO_ICON = 134400 -- INV_Misc_QuestionMark: lets #showtooltip pick the icon
+local MAX_CHARACTER_MACRO_COUNT = MAX_CHARACTER_MACROS
+	or (Constants and Constants.MacroConsts and Constants.MacroConsts.MAX_CHARACTER_MACROS)
+	or 18
 
 function TotemBar:EditMacro(force, old, new)
 	if Yata.CurrentDb.MacroEnabled == true and not InCombatLockdown() then
 		local numGlobal, numLocal = GetNumMacros()
 		local macroindex = GetMacroIndexByName(MACRO_NAME)
-		local hasRoom = numLocal < Constants.MacroConsts.MAX_CHARACTER_MACROS
+		local hasRoom = numLocal < MAX_CHARACTER_MACRO_COUNT
 		if force or (macroindex == 0 and hasRoom) then
 			local macro = "#showtooltip\n/castsequence reset=combat/"..Yata.CurrentDb.MacroResetKey.." "
 			local totems = {}

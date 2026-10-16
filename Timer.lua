@@ -1,6 +1,10 @@
+local _, ns = ...
+
 if select(2, UnitClass('player')) ~= "SHAMAN" then
 	return
 end
+
+local Yata = ns.Yata
 
 -- Totem duration and cooldown timers.
 --
@@ -25,7 +29,8 @@ local CooldownColor = { 1.0, 0.65, 0.0 }
 local durationFormatter = C_StringUtil.CreateSecondsFormatter()
 
 local activeTotems = {}   -- totem slot -> button whose totem is down in that slot
-local castTotems = {}     -- totem slot -> button we last saw the player cast for that slot
+local castTotems = {}     -- totem slot -> spell id we last saw the player cast for that slot
+local coolingDown = {}    -- button -> true while its spell is on cooldown
 local cooldownTicker
 
 local function ShowsBars()
@@ -312,18 +317,15 @@ function Yata:ResetTimers()
 
 	self:ClearTimers()
 
-	for slot = 1, MAX_TOTEMS do
-		self:UpdateTotemSlot(slot)
-	end
+	self:RefreshTotemSlots()
 	self:UpdateCooldowns()
 end
 
 function Yata:ClearTimers()
 	self.DurationGroup:ReleaseAll()
 	self.CooldownGroup:ReleaseAll()
-	for slot in pairs(activeTotems) do
-		activeTotems[slot] = nil
-	end
+	wipe(activeTotems)
+	wipe(coolingDown)
 	if self.Bar then
 		for _, button in ipairs(self.Bar.Groups.All) do
 			button.Cooldown:Clear()
@@ -335,11 +337,25 @@ end
 -- Totem durations
 --
 
+-- Matches by spell id or exact name first, then falls back to a totem name
+-- that only contains the spell name (e.g. a rank suffix). name must not be secret.
 local function FindButton(spellId, name)
-	for _, button in ipairs(Yata.Bar.Groups.All) do
+	if not spellId and not name then
+		return nil
+	end
+	local buttons = Yata.Bar.Groups.All
+	for _, button in ipairs(buttons) do
 		local totem = button.Totem
 		if totem.GlobalId == spellId or (name and totem.Name == name) then
 			return button
+		end
+	end
+	if name then
+		name = name:lower()
+		for _, button in ipairs(buttons) do
+			if name:find(button.Totem.Name:lower(), 1, true) then
+				return button
+			end
 		end
 	end
 end
@@ -354,15 +370,16 @@ function Yata:UNIT_SPELLCAST_SUCCEEDED(event, unit, castGUID, spellId)
 		return
 	end
 
+	-- Remember spell ids rather than buttons: a Reload may replace the buttons
 	local totem = button.Totem
 	if totem.Slot then
-		castTotems[totem.Slot] = button
+		castTotems[totem.Slot] = totem.GlobalId
 		self:UpdateTotemSlot(totem.Slot)
 	elseif totem.CallActionBase then
 		-- A Call spell drops the totems assigned to its page of the multicast bar
 		for slot = 1, MAX_TOTEMS do
 			local _, id = GetActionInfo(totem.CallActionBase + slot - 1)
-			castTotems[slot] = id and FindButton(id) or nil
+			castTotems[slot] = id
 			self:UpdateTotemSlot(slot)
 		end
 	end
@@ -373,7 +390,16 @@ function Yata:PLAYER_TOTEM_UPDATE(event, slot)
 end
 
 function Yata:PLAYER_DEAD()
+	wipe(castTotems)
 	self:ClearTimers()
+end
+
+-- In combat we can't tell when a totem expires, so the slot keeps pointing at
+-- the last cast button. Re-read every slot once the details are visible again.
+function Yata:RefreshTotemSlots()
+	for slot = 1, MAX_TOTEMS do
+		self:UpdateTotemSlot(slot)
+	end
 end
 
 function Yata:UpdateTotemSlot(slot)
@@ -387,13 +413,13 @@ function Yata:UpdateTotemSlot(slot)
 	if secret then
 		-- We can't read which totem this is, so trust the last one we saw cast
 		haveTotem, name, _, _, icon = GetTotemInfo(slot)
-		button = castTotems[slot]
+		button = FindButton(castTotems[slot])
 	else
 		local spellId
 		haveTotem, name, _, _, icon, _, spellId = GetTotemInfo(slot)
 		haveTotem = haveTotem and name ~= nil and name ~= ""
 		if haveTotem then
-			button = FindButton(spellId, name) or castTotems[slot]
+			button = FindButton(spellId, name) or FindButton(castTotems[slot])
 		else
 			castTotems[slot] = nil
 		end
@@ -448,12 +474,9 @@ end
 
 function Yata:UpdateButtonCooldown(button)
 	local totem = button.Totem
-	if not totem.GlobalId then
-		return false -- proxy buttons
-	end
-
 	local onCooldown = IsOnCooldown(totem.Name)
 	local duration = onCooldown and C_Spell.GetSpellCooldownDuration(totem.Name, true)
+	coolingDown[button] = onCooldown or nil
 
 	if ShowsBars() then
 		if duration then
@@ -476,28 +499,40 @@ function Yata:UpdateButtonCooldown(button)
 	return onCooldown
 end
 
+local function StopCooldownTicker()
+	if cooldownTicker then
+		cooldownTicker:Cancel()
+		cooldownTicker = nil
+	end
+end
+
+-- SPELL_UPDATE_COOLDOWN doesn't reliably fire when a cooldown ends, so poll
+-- the running ones and only update those that have finished
+local function CheckCooldownsEnded()
+	for button in pairs(coolingDown) do
+		if not IsOnCooldown(button.Totem.Name) then
+			Yata:UpdateButtonCooldown(button)
+		end
+	end
+	if not next(coolingDown) then
+		StopCooldownTicker()
+	end
+end
+
 function Yata:UpdateCooldowns()
 	if not self.CurrentDb.TimerEnabled or not self.Bar then
-		if cooldownTicker then
-			cooldownTicker:Cancel()
-			cooldownTicker = nil
-		end
+		wipe(coolingDown)
+		StopCooldownTicker()
 		return
 	end
 
-	local anyCooldown = false
 	for _, button in ipairs(self.Bar.Groups.All) do
-		if self:UpdateButtonCooldown(button) then
-			anyCooldown = true
-		end
+		self:UpdateButtonCooldown(button)
 	end
 
-	-- SPELL_UPDATE_COOLDOWN doesn't reliably fire when a cooldown ends, so
-	-- poll while any are running
-	if anyCooldown and not cooldownTicker then
-		cooldownTicker = C_Timer.NewTicker(1, function() Yata:UpdateCooldowns() end)
-	elseif not anyCooldown and cooldownTicker then
-		cooldownTicker:Cancel()
-		cooldownTicker = nil
+	if next(coolingDown) and not cooldownTicker then
+		cooldownTicker = C_Timer.NewTicker(1, CheckCooldownsEnded)
+	elseif not next(coolingDown) then
+		StopCooldownTicker()
 	end
 end

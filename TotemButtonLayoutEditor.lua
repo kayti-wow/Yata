@@ -1,6 +1,11 @@
+local _, ns = ...
+
 if select(2, UnitClass('player')) ~= "SHAMAN" then
 	return
 end
+
+local Yata = ns.Yata
+local TOTEM_SET_PRIMARY_DEFAULT = ns.TOTEM_SET_PRIMARY_DEFAULT
 
 local AceGUI = LibStub("AceGUI-3.0")
 

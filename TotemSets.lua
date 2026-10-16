@@ -1,6 +1,12 @@
+local _, ns = ...
+
 if select(2, UnitClass('player')) ~= "SHAMAN" then
 	return
 end
+
+local Yata = ns.Yata
+local SpellGroups = ns.SpellGroups
+local TOTEM_SET_PRIMARY_DEFAULT = ns.TOTEM_SET_PRIMARY_DEFAULT
 
 function Yata:InitTotemSets()
 	if self.CurrentDb.Sets then
