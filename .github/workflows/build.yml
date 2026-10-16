@@ -49,7 +49,8 @@ jobs:
       WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
       # Alphas never go to GitHub Releases. The packager already skips GitHub
       # without a tag, and leaving the token unset makes sure of it
-      GH_API_TOKEN: ${{ startsWith(github.ref, 'refs/tags/') && secrets.GITHUB_TOKEN || '' }}
+      # (the packager reads GITHUB_OAUTH; it ignores GH_API_TOKEN)
+      GITHUB_OAUTH: ${{ startsWith(github.ref, 'refs/tags/') && secrets.GITHUB_TOKEN || '' }}
       # BigWigsMods/packager v2, pinned so the patch below applies to a known release.sh
       PACKAGER_REF: e50a250f8705041e40f2fa1ddcb280a686d65aa0
     steps:
@@ -107,3 +108,5 @@ jobs:
         with:
           name: Yata-${{ steps.build.outputs.version }}
           path: .release/*.zip
+          include-hidden-files: true # .release is a dot-directory, which is skipped by default
+          if-no-files-found: error
