@@ -13,6 +13,7 @@
 ## X-License: MIT
 ## X-Curse-Project-Name: yata-forever
 ## X-Curse-Project-ID: 1748365
+## X-Wago-ID: 4N2bvdNL
 embeds.xml
 Libs\LibDataBroker-1.1.lua
 Localization\enUS.lua
