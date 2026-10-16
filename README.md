@@ -106,7 +106,8 @@ The bar must keep working in combat, so everything that changes layout runs in r
 In combat, during encounters and in PvP, the client may return "secret" values from totem and cooldown APIs (`GetTotemInfo`, `GetTotemTimeLeft`, `C_Spell.GetSpellCooldown`). Addon code can pass a secret value to a widget, but can't compare it, do maths on it, or use it as a table key. `Timer.lua` is written around that rule:
 
 - Timing comes from duration objects (`GetTotemDuration(slot)` and `C_Spell.GetSpellCooldownDuration`). These feed `StatusBar:SetTimerDuration`, `Cooldown:SetCooldownFromDurationObject` and a `C_DurationUtil` text binding directly.
-- When `C_Secrets.ShouldTotemSlotBeSecret(slot)` is true, the totem in a slot is identified from the player's own `UNIT_SPELLCAST_SUCCEEDED` events, which aren't secret. For a Call spell, its action slots are read instead. The bar is shown or hidden with `SetAlphaFromBoolean`.
+- When `C_Secrets.ShouldTotemSlotBeSecret(slot)` is true, the totem in a slot is identified from the player's own `UNIT_SPELLCAST_SUCCEEDED` events, which aren't secret. For a Call spell, its action slots are read instead. The bar is shown or hidden with `SetAlphaFromBoolean(duration:IsZero(), 0, 1)`. `haveTotem` from `GetTotemInfo` is true for any usable slot, so only the duration shows whether a totem is down.
+- Slots stay secret for as long as any addon restriction is active, and an encounter or PvP match can outlast combat. Every slot is re-read when `ADDON_RESTRICTION_STATE_CHANGED` reports that a restriction has lifted, and on `PLAYER_REGEN_ENABLED`.
 - Cooldowns branch only on `isActive` and `isOnGCD`, which the API marks as never secret.
 
 Options that rebuild frames are disabled while `InCombatLockdown()` is true.
@@ -136,7 +137,7 @@ There is no build step or test suite. To test a change, copy the folder into the
 Known issues:
 
 - The Forever port hasn't been tested in game yet. `/yata debug` output from a real client is the quickest way to confirm that the multicast slots and Call spells match what the code expects.
-- Several files define globals (`TotemBar`, `Header`, `SpellGroups`, `ElementsMap`, `TOTEM_SET_*`, `SPELL_GROUP_*`) that another addon could overwrite.
+- On the Forever beta (build 1.60.1.70425), Alt-clicking a weapon imbue to remove it raises a Lua error and removes nothing. Blizzard's `cancelaura` action in `SecureTemplates.lua` still reads a `CANCELABLE_ITEMS` table, but the Forever copy of that file no longer defines it. Yata can't work around this because `C_Spell.CancelItemTempEnchantment` is restricted, so it needs a Blizzard fix.
 
 ## Credits
 

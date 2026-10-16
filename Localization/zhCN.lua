@@ -1,7 +1,7 @@
 if select(2, UnitClass('player')) ~= "SHAMAN" then
 	return
 end
-local L = LibStub("AceLocale-3.0"):NewLocale("Yata", "zhCN", true)
+local L = LibStub("AceLocale-3.0"):NewLocale("Yata", "zhCN", false)
 if not L then return end
 
 L["Advanced"] = "高级" -- Needs review

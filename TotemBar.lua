@@ -215,7 +215,8 @@ function TotemBar:Init()
 					buttons = newtable(header:GetChildren())
 										
 					for k, button in ipairs(buttons) do
-						local currentaction = button:GetAttribute("actionid") + self:GetAttribute("currentcallindex") * 4
+						-- currentcallindex is only set once a Call spell is on the bar
+						local currentaction = button:GetAttribute("actionid") + (self:GetAttribute("currentcallindex") or 0) * 4
 						local _, globalId, _ = GetActionInfo(currentaction)
 						
 						if button:GetAttribute("globalid") == globalId then

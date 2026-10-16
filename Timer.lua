@@ -262,6 +262,7 @@ function Yata:InitTimer()
 	self:RegisterEvent("PLAYER_TOTEM_UPDATE")
 	self:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 	self:RegisterEvent("SPELL_UPDATE_COOLDOWN", "UpdateCooldowns")
+	self:RegisterEvent("ADDON_RESTRICTION_STATE_CHANGED")
 
 	self:LoadTimerConfig()
 end
@@ -394,6 +395,14 @@ function Yata:PLAYER_DEAD()
 	self:ClearTimers()
 end
 
+-- Totem slots stay secret while any addon restriction is active, and an
+-- encounter or PvP match can outlast combat, so re-read them when one lifts
+function Yata:ADDON_RESTRICTION_STATE_CHANGED(event, restrictionType, state)
+	if state == Enum.AddOnRestrictionState.Inactive then
+		self:RefreshTotemSlots()
+	end
+end
+
 -- In combat we can't tell when a totem expires, so the slot keeps pointing at
 -- the last cast button. Re-read every slot once the details are visible again.
 function Yata:RefreshTotemSlots()
@@ -412,7 +421,7 @@ function Yata:UpdateTotemSlot(slot)
 
 	if secret then
 		-- We can't read which totem this is, so trust the last one we saw cast
-		haveTotem, name, _, _, icon = GetTotemInfo(slot)
+		_, name, _, _, icon = GetTotemInfo(slot)
 		button = FindButton(castTotems[slot])
 	else
 		local spellId
@@ -440,7 +449,9 @@ function Yata:UpdateTotemSlot(slot)
 			local color = ElementColors[button and button.Totem.SpellGroup] or ElementColors.Earth
 			SetupBar(bar, name, icon, duration, color)
 			if secret then
-				bar:SetAlphaFromBoolean(haveTotem, 1, 0)
+				-- GetTotemInfo's haveTotem only means the slot is usable, so go by
+				-- the duration instead: it is zero when no totem is down
+				bar:SetAlphaFromBoolean(duration:IsZero(), 0, 1)
 			end
 		else
 			self.DurationGroup:ReleaseBar(slot)
