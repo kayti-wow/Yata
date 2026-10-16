@@ -5,6 +5,8 @@ end
 local _G = _G
 local LibKeyBound = LibStub("LibKeyBound-1.0")
 local AceEvent = LibStub("AceEvent-3.0")
+local Masque = LibStub("Masque", true)
+local TOTEMIC_RECALL = 36936
 local Button = CreateFrame("Button")
 local Button_MT = {__index = Button}
 
@@ -22,7 +24,10 @@ function Yata.Button:CreateBase(id, parent)
 	button:SetWidth(36)
 	button:SetHeight(36)	
 	button:SetFrameStrata("MEDIUM")
-	button:RegisterForClicks("LeftButtonUp","RightButtonUp")		
+	button:RegisterForClicks("LeftButtonUp","RightButtonUp")
+	-- Our OnClick wrappers expect one click per press, so act on key up even
+	-- when the ActionButtonUseKeyDown setting is on
+	button:SetAttribute("useOnKeyDown", false)
 	
 	button:HookScript("OnEnter", function() button:OnEnter(button) end)
 	button:HookScript("OnLeave", function() button:OnLeave() end)
@@ -45,7 +50,7 @@ function Yata.Button:CreateBase(id, parent)
 	button.HotKey:SetJustifyH("RIGHT")
 	button.HotKey:SetPoint("TOPLEFT",-2,-2)	
 	
-	button:SetNormalTexture("")	
+	button:SetNormalTexture("Interface\\Buttons\\UI-Quickslot2")
 	button.NormalTexture = button:GetNormalTexture()
 	button.NormalTexture:SetWidth(66)
 	button.NormalTexture:SetHeight(66)
@@ -74,7 +79,7 @@ function Yata.Button:Create(id, parent, totem)
 		
 		local callY, frameY
 		
-		if(Yata.CurrentDb.ButtonSkin == "Blizzard") then
+		if not Masque then
 			button.CallFrame:SetHeight(7)
 			callY = 5
 			frameY = 3
@@ -89,7 +94,7 @@ function Yata.Button:Create(id, parent, totem)
 		
 		if not (button.CallFrame.texture) then
 			local t = button.CallFrame:CreateTexture(nil,"BACKGROUND")
-			t:SetTexture(0,0,0, 0.8)
+			t:SetColorTexture(0,0,0, 0.8)
 			t:SetAllPoints(button.CallFrame)
 			t:SetBlendMode("BLEND")
 			button.CallFrame.texture = t
@@ -102,7 +107,7 @@ function Yata.Button:Create(id, parent, totem)
 		button.Call1:SetHeight(3)
 		if not (button.Call1.texture) then
 			local t = button.Call1:CreateTexture(nil,"OVERLAY")
-			t:SetTexture(0.96,0.25,0.37,0.8)
+			t:SetColorTexture(0.96,0.25,0.37,0.8)
 			t:SetAllPoints(button.Call1)
 			t:SetBlendMode("BLEND")
 			button.Call1.texture = t
@@ -116,7 +121,7 @@ function Yata.Button:Create(id, parent, totem)
 		button.Call2:SetHeight(3)
 		if not (button.Call2.texture) then
 			local t = button.Call2:CreateTexture(nil,"OVERLAY")
-			t:SetTexture(0.2,0.79,0.89,1)
+			t:SetColorTexture(0.2,0.79,0.89,1)
 			t:SetAllPoints(button.Call2)
 			t:SetBlendMode("BLEND")
 			button.Call2.texture = t
@@ -130,7 +135,7 @@ function Yata.Button:Create(id, parent, totem)
 		button.Call3:SetHeight(3)
 		if not (button.Call3.texture) then
 			local t = button.Call3:CreateTexture(nil,"OVERLAY")
-			t:SetTexture(0.57,0.29,1,1)
+			t:SetColorTexture(0.57,0.29,1,1)
 			t:SetAllPoints(button.Call3)
 			t:SetBlendMode("BLEND")
 			button.Call3.texture = t
@@ -155,7 +160,7 @@ function Yata.Button:Create(id, parent, totem)
 	
 	if totem.GlobalId and totem.ActionId and totem.Slot then
 		button:SetAttribute("shift-type2", "spell")
-		button:SetAttribute("shift-spell2", GetSpellInfo(36936)) -- Totemic Call
+		button:SetAttribute("shift-spell2", C_Spell.GetSpellName(TOTEMIC_RECALL))
 
 		local setcallbutton = Yata.CurrentDb.ButtonSetCallKey
 		local prefix = ""
@@ -167,8 +172,8 @@ function Yata.Button:Create(id, parent, totem)
 		button:SetAttribute("action", button.Totem.ActionId)
 		button:SetAttribute(prefix.."spell1", totem.GlobalId)
 
-		button:SetAttribute("type2", "macro")
-		button:SetAttribute("macrotext2", "/script DestroyTotem("..totem.Slot..")")
+		button:SetAttribute("type2", "destroytotem")
+		button:SetAttribute("totem-slot2", totem.Slot)
 		
 		button:SetAttribute("element", totem.SpellGroup)
 		button:SetAttribute("actionid", totem.ActionId)
@@ -190,7 +195,7 @@ function Yata.Button:Create(id, parent, totem)
 		button:SetAttribute(prefix.."attribute-frame2", parent:GetParent())
 		
 		button:SetAttribute("type2", "spell")
-		button:SetAttribute("spell2", GetSpellInfo(36936)) -- Totemic Call
+		button:SetAttribute("spell2", C_Spell.GetSpellName(TOTEMIC_RECALL))
 				
 		button:SetAttribute("iscall", true)
 		button:SetAttribute("callindex", totem.CallIndex)
@@ -207,8 +212,8 @@ function Yata.Button:Create(id, parent, totem)
 		button:SetAttribute("alt-spell1", ATTRIBUTE_NOOP)
 		button:SetAttribute("alt-spell2", ATTRIBUTE_NOOP)
 		
-		button:SetAttribute("*target-slot1", GetInventorySlotInfo("MainHandSlot"))
-		button:SetAttribute("*target-slot2", GetInventorySlotInfo("SecondaryHandSlot"))
+		button:SetAttribute("*target-slot1", INVSLOT_MAINHAND)
+		button:SetAttribute("*target-slot2", INVSLOT_OFFHAND)
 	end
 	
 	button:SetAttribute( "_onenter", [[  
@@ -378,7 +383,7 @@ end
 
 function Button:SPELL_UPDATE_USABLE()
 	if not self.Totem then return end
-	local usable, nomana = IsUsableSpell(self.Totem.Name)
+	local usable, nomana = C_Spell.IsSpellUsable(self.Totem.Name)
 	if(usable) then
 		self.Icon:SetVertexColor(1.0,1.0,1.0)
 	elseif(nomana) then
@@ -404,10 +409,11 @@ function Button:SetCallIndicators()
 		if (Yata.Bar) then
 			local currentIndex = Yata.Bar:GetAttribute("currentcallindex")
 										
-			local bases = { 133, 137, 141}
+			local actionBase = Yata:GetMultiCastActionBase()
 				
-			for k, base in ipairs(bases) do
-				for i = base, base + 3 do
+			for k = 1, #TOTEM_MULTI_CAST_SUMMON_SPELLS do
+				local base = actionBase + 1 + (k - 1) * MAX_TOTEMS
+				for i = base, base + MAX_TOTEMS - 1 do
 					local _, globalID, _ = GetActionInfo(i)
 					
 					if globalID  == self.Totem.GlobalId and self.Call1 then
@@ -472,14 +478,14 @@ function Button:SetTooltip()
 	if Yata.CurrentDb.Tooltip == 2 then
 		GameTooltip:SetText(self.Totem.Name, 1.0, 1.0, 1.0)
 	elseif Yata.CurrentDb.Tooltip == 3 and self.Totem.GlobalId then
-		GameTooltip:SetHyperlink(GetSpellLink( self.Totem.GlobalId))
+		GameTooltip:SetSpellByID(self.Totem.GlobalId)
 	end
 	
 	if self.Totem.SpellGroup == "CallSpell" and Yata.CurrentDb.MultiTooltip == true then
 		
 		GameTooltip:AddLine(" ", 0,0,0,false)
 		
-		local set = Yata:GetTotemSet(name)
+		local set = Yata:GetTotemSet()
 		if set ~= nil then 
 			set = set.GroupOrder 
 		end
@@ -505,7 +511,7 @@ function Button:AddTotemToTooltip(element, actionId)
 	_, globalID, _ = GetActionInfo(actionId)
 			
 	if globalID ~= nil then
-		name, _, _, _, _, _, _, _, _ = GetSpellInfo(globalID)
+		name = C_Spell.GetSpellName(globalID)
 	end
 				
 	if name == nil then

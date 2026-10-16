@@ -2,9 +2,7 @@ if select(2, UnitClass('player')) ~= "SHAMAN" then
 	return
 end
 
-local LBF = LibStub("LibButtonFacade",true)
 local LSM = LibStub("LibSharedMedia-3.0",true)
-local AceGUI = LibStub("AceGUI-3.0",true)
 local LDB = LibStub("LibDataBroker-1.1", true)
 local L = LibStub("AceLocale-3.0"):GetLocale("Yata")
 local resetkeys = {"shift", "ctrl", "alt", "none"}
@@ -104,7 +102,7 @@ function Yata:PopulateOptions()
 						type = "select",
 						values = resetkeys,
 						get = function() for k,v in ipairs(resetkeys) do if v == self.CurrentDb.ButtonNoSwapKey then return k end end end,
-						set = function(info, value) Yata.CurrentDb.ButtonNoSwapKey = resetkeys[value]; SetAttribute("noswapkey",Yata.CurrentDb.ButtonNoSwapKey) end,
+						set = function(info, value) Yata.CurrentDb.ButtonNoSwapKey = resetkeys[value]; Yata.Bar:SetAttribute("noswapkey",Yata.CurrentDb.ButtonNoSwapKey) end,
 						disabled = function() return (InCombatLockdown() or self.CurrentDb.AutoButtonSwap == false) end,				
 						order = 3,
 					},
@@ -450,7 +448,7 @@ function Yata:PopulateOptions()
 						name = L["TotemSetsButton"],
 						desc = L["TotemSetsButtonDesc"],
 						type = "execute",
-						func = function() local editor = AceGUI:Create("Yata_TotemButtonLayoutEditor") end,
+						func = function() Yata:OpenLayoutEditor() end,
 						disabled = function() return InCombatLockdown() end,
 					},				},
 				order = 4,
@@ -470,7 +468,7 @@ function Yata:PopulateOptions()
 						desc = L["EnableAdvancedDesc"],
 						type = "toggle",
 						get = function() return self.CurrentDb.AdvancedEnabled end,
-						set = function(info, value) Yata.CurrentDb.AdvancedEnabled = value; Yata.Bar:ConfigureBarDisplay(self.CurrentDb.ButtonGap, self.CurrentDb.BarOrientation, self.CurrentDb.VisibleButtons); Yata.Bar:UpdateCallIndicators(); end,
+						set = function(info, value) Yata.CurrentDb.AdvancedEnabled = value; Yata.Bar:ConfigureBarDisplay(self.CurrentDb.ButtonGap, self.CurrentDb.BarOrientation, self.CurrentDb.VisibleButtons); Yata.Bar:UpdateCallIndicators(); Yata:UpdateBlizzardBar() end,
 						disabled = function() return InCombatLockdown() end,
 						order = 1,
 						width = "full"
@@ -500,7 +498,7 @@ function Yata:PopulateOptions()
 						desc = L["ShowBlizzBarDesc"],
 						type = "toggle",
 						get = function() return self.CurrentDb.AdvShowBlizzBar end,
-						set = function(info, value) Yata.CurrentDb.AdvShowBlizzBar = value; end,
+						set = function(info, value) Yata.CurrentDb.AdvShowBlizzBar = value; Yata:UpdateBlizzardBar() end,
 						disabled = function() return (InCombatLockdown() or self.CurrentDb.AdvancedEnabled == false) end,
 						order = 2,
 						width = "full"
@@ -510,22 +508,8 @@ function Yata:PopulateOptions()
 			},
 		},
 	}
-	if LBF then
-		buttonskin = {
-			name = L["Skin"],
-			desc = L["SkinDesc"],
-			type = "select",
-			values = function() return LBF:ListSkins() end,
-			get = function() return self.CurrentDb.ButtonSkin  end,
-			set = function(info, value) Yata.Bar:SkinButtons(value) end,
-			disabled = function() return InCombatLockdown() end,
-			width = "double",
-			order = 2,
-		}
-		options.args.totembar.args["buttonskin"] = buttonskin
-	end
 	if LSM then
-		timerbarskin = {
+		local timerbarskin = {
 			name = L["TimerTexture"],
 			desc = L["TimerTextureDesc"],
 			type = "select",
@@ -535,7 +519,7 @@ function Yata:PopulateOptions()
 			disabled = function() return (InCombatLockdown() or self.CurrentDb.TimerEnabled == false or self.CurrentDb.TimerType == 2) end,
 			order = 4,
 		}
-		timerbarfont = {
+		local timerbarfont = {
 			name = L["TimerFont"],
 			desc = L["TimerFontDesc"],
 			type = "select",
@@ -559,7 +543,7 @@ if LDB then
 		label = "Yata",
 		OnClick = function(_, msg)
 			if msg == "LeftButton" then
-				if InCombatLockdown() ~= 1 then -- Only toggle the lock if we're out of combat
+				if not InCombatLockdown() then -- Only toggle the lock if we're out of combat
 					if Yata.CurrentDb.Locked then
 						Yata.Bar:Unlock()
 					else
@@ -592,7 +576,7 @@ end
 		hasEditBox = 1,
 		whileDead = 1,
 		hideOnEscape = 1,
-		OnAccept = function(self,data) data:AddSet(_G[self:GetName().."EditBox"]:GetText()) end,
+		OnAccept = function(dialog, data) data:AddSet(dialog:GetEditBox():GetText()) end,
 		OnCancel = function() end,
 	}
 	
@@ -604,6 +588,6 @@ end
 		hasEditBox = 1,
 		whileDead = 1,
 		hideOnEscape = 1,
-		OnAccept = function(self,data) data:DelSet(_G[self:GetName().."EditBox"]:GetText()) end,
+		OnAccept = function(dialog, data) data:DelSet(dialog:GetEditBox():GetText()) end,
 		OnCancel = function() end,
 	}

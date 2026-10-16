@@ -1,11 +1,11 @@
-﻿if select(2, UnitClass('player')) ~= "SHAMAN" then
+if select(2, UnitClass('player')) ~= "SHAMAN" then
 	return
 end
 
 TotemBar = CreateFrame("Frame")
 TotemBar.__index = TotemBar
 
-local LBF = LibStub("LibButtonFacade", true)
+local Masque = LibStub("Masque", true)
 	
 function TotemBar.Create()
 	local bar = CreateFrame("Frame", "YataBarGrip", UIParent, "SecureFrameTemplate, SecureHandlerAttributeTemplate")
@@ -49,10 +49,7 @@ function TotemBar:New()
 		proxy:SetParent(self)
 		self.Groups[spellgroup].Proxy = proxy
 		
-		if LBF then
-			proxy.LBFButtonData = {Button = proxy, Icon = proxy.Icon, HotKey = proxy.HotKey, Cooldown = proxy.Cooldown}
-			self.LBFGroup:AddButton(proxy, proxy.LBFButtonData)				
-		end		
+		self:AddMasqueButton(proxy)
 		
 		for l, totemname in ipairs(self.Set[spellgroup]) do
 
@@ -61,10 +58,7 @@ function TotemBar:New()
 			
 			local button = Yata.Button:Create(totem.Name,self.Groups[totem.SpellGroup].Header, totem)
 					
-			if LBF then
-				button.LBFButtonData = {Button = button, Icon = button.Icon, HotKey = button.HotKey, Cooldown = button.Cooldown}
-				self.LBFGroup:AddButton(button, button.LBFButtonData)				
-			end			
+			self:AddMasqueButton(button)
 			
 			button:SetAttribute("position", l-1)
 			
@@ -82,7 +76,6 @@ function TotemBar:New()
 	self:SetAttribute("autoswaptocall", Yata.CurrentDb.AutoSwapToCall)	
 		
 	self:SetProxyBinding()
-	self:SkinButtons()
 	self:SetManualSwapToCallKey()
 	self:ConfigureBarDisplay()
 		
@@ -134,6 +127,9 @@ function TotemBar:Destroy()
 		end			
 	
 		if(self.Groups[spellgroup].Proxy) then
+			if self.MasqueGroup then
+				self.MasqueGroup:RemoveButton(self.Groups[spellgroup].Proxy)
+			end
 			self.Groups[spellgroup].Proxy:SetParent(nil)
 			self.Groups[spellgroup].Proxy:Hide()
 		end
@@ -141,6 +137,9 @@ function TotemBar:Destroy()
 	
 	for m,button in ipairs(self.Groups.All) do
 		if(button) then
+			if self.MasqueGroup then
+				self.MasqueGroup:RemoveButton(button)
+			end
 			button:SetParent(nil)
 			button:Hide()
 		end
@@ -153,7 +152,7 @@ function TotemBar:Init()
 	self:SetHeight(36)
 	self:SetWidth(0)
 	self.Texture = self:CreateTexture()
-	self.Texture:SetTexture(0, 0, 0.5, 0.5)
+	self.Texture:SetColorTexture(0, 0, 0.5, 0.5)
 	self.Texture:SetAllPoints(self)	
 	self:RegisterForDrag( "LeftButton" )
 	self:EnableMouse(true)
@@ -243,11 +242,9 @@ function TotemBar:Init()
 							[SPELL_GROUP_CALL] = {["Header"] = nil, ["Buttons"] = {}, ["Proxy"] = nil }, 
 							[SPELL_GROUP_IMBUE] = {["Header"] = nil, ["Buttons"] = {}, ["Proxy"] = nil }}
 	
-	if LBF then
-		self.LBFGroup = LBF:Group("Yata")
-		self.LBFGroup.SkinID = Yata.CurrentDb.ButtonSkin
-		LBF:RegisterSkinCallback("Yata",self.SkinChanged,self)		
-	end	
+	if Masque then
+		self.MasqueGroup = Masque:Group("Yata")
+	end
 	
 	self:RegisterEvent("UPDATE_MULTI_CAST_ACTIONBAR")
 	self:RegisterEvent("PLAYER_REGEN_ENABLED")
@@ -256,20 +253,6 @@ function TotemBar:Init()
 	
 	self:LoadPosition()
 end
-
-function TotemBar:SkinChanged(SkinID,Gloss,Backdrop,Group,Button,Colors)
-	Yata.CurrentDb.ButtonSkin = SkinID
-	
-	Yata.CurrentDb.BF = {}
-	Yata.CurrentDb.BF.Gloss = Gloss
-	Yata.CurrentDb.BF.Backdrop = Backdrop
-	Yata.CurrentDb.BF.Group = Group
-	Yata.CurrentDb.BF.Button = Button
-	Yata.CurrentDb.BF.Colors = Colors
-	
-	self:ConfigureBarDisplay()
-end
-
 
 function TotemBar:PositionButtons()
 	for j, spellgroup in ipairs(SpellGroups) do
@@ -285,15 +268,16 @@ function TotemBar:SetPopOutScale(value)
 	end
 end
 
-function TotemBar:SkinButtons(skin)
-	Yata.CurrentDb.ButtonSkin = skin or Yata.CurrentDb.ButtonSkin
-	if LBF and self.LBFGroup then
-		if (Yata.CurrentDb.BF ~= nil) then
-			self.LBFGroup:Skin(skin, Yata.CurrentDb.BF.Gloss, Yata.CurrentDb.BF.Backdrop, Yata.CurrentDb.BF.Colors)
-		else
-			self.LBFGroup:Skin(skin)
-		end
+-- Masque keeps its own skin settings, so we only need to hand it our buttons
+function TotemBar:AddMasqueButton(button)
+	if self.MasqueGroup then
+		self.MasqueGroup:AddButton(button, {Icon = button.Icon, HotKey = button.HotKey, Cooldown = button.Cooldown})
 	end
+end
+
+-- Blizzard's default button art needs a little extra room between buttons
+function TotemBar:UsesDefaultSkin()
+	return self.MasqueGroup == nil
 end
 
 function TotemBar:SetManualSwapToCallKey(key)
@@ -371,7 +355,7 @@ function TotemBar:ConfigureBarDisplay(gapValue, orientationValue, visibleValue)
 	Yata.CurrentDb.BarOrientation = orientationValue
 	Yata.CurrentDb.VisibleButtons = visibleValue
 	
-	if Yata.CurrentDb.ButtonSkin == "Blizzard" then
+	if self:UsesDefaultSkin() then
 		gapValue = gapValue + 4
 	end
 	
@@ -399,7 +383,7 @@ function TotemBar:ConfigureBarDisplay(gapValue, orientationValue, visibleValue)
 	self:PositionButtons()
 
 	for k,v in ipairs(self.Groups.All) do
-		 if Yata.CurrentDb.ButtonSkin == "Blizzard" then
+		 if self:UsesDefaultSkin() then
 			v.Duration:SetPoint("TOP",v.Parent,"BOTTOM",0,-4)
 		 else
 			v.Duration:SetPoint("TOP",v.Parent,"BOTTOM",0,0)
@@ -475,11 +459,15 @@ function TotemBar:OnEvent(event, ...)
 	end
 end
 
-function TotemBar:EditMacro(force, old,new)
+local MACRO_NAME = "YataTotemStomp"
+local MACRO_ICON = 134400 -- INV_Misc_QuestionMark: lets #showtooltip pick the icon
+
+function TotemBar:EditMacro(force, old, new)
 	if Yata.CurrentDb.MacroEnabled == true and not InCombatLockdown() then
 		local numGlobal, numLocal = GetNumMacros()
-		local macroindex = GetMacroIndexByName("YataTotemStomp")
-		if force or macroindex == 0 and numGlobal < 36 and numLocal < 18 then
+		local macroindex = GetMacroIndexByName(MACRO_NAME)
+		local hasRoom = numLocal < Constants.MacroConsts.MAX_CHARACTER_MACROS
+		if force or (macroindex == 0 and hasRoom) then
 			local macro = "#showtooltip\n/castsequence reset=combat/"..Yata.CurrentDb.MacroResetKey.." "
 			local totems = {}
 			local set = Yata:GetTotemSet()
@@ -493,30 +481,16 @@ function TotemBar:EditMacro(force, old,new)
 					end
 				end
 			end
-			for k,v in ipairs(totems) do
-				if totems[k] and totems[k+1] then
-					macro = string.format("%s%s, ",macro,v)
-				else
-					macro = string.format("%s%s",macro,v)
-				end
-			end
-			local numIcons = GetNumMacroIcons()
-			local iconid = 0
-			for i=1,numIcons do
-				if GetMacroIconInfo(i) == "Interface\\Icons\\INV_Misc_QuestionMark" then
-					iconid = i
-					break
-				end
-			end	
-			if force and macroindex > 0 then		
-				EditMacro(macroindex, "YataTotemStomp", iconid, macro, 1)
-			else
-				CreateMacro("YataTotemStomp",iconid,macro,1,1)
+			macro = macro..table.concat(totems, ", ")
+			if macroindex > 0 then
+				EditMacro(macroindex, MACRO_NAME, MACRO_ICON, macro)
+			elseif hasRoom then
+				CreateMacro(MACRO_NAME, MACRO_ICON, macro, true)
 			end
 		elseif macroindex > 0 and old and new then
-			local name, texture, macro, isLocal = GetMacroInfo(macroindex)
+			local name, texture, macro = GetMacroInfo(macroindex)
 			macro = string.gsub(macro,old,new)
-			EditMacro(macroindex, name, texture, macro, isLocal);
+			EditMacro(macroindex, name, texture, macro)
 		end	
 	end
 end
