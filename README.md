@@ -68,6 +68,7 @@ Files load in the order listed in `Yata.toc`:
 | `TotemSets.lua` | Creating, saving and validating totem sets |
 | `TotemButtonLayoutEditor.lua` | `Yata:OpenLayoutEditor()`, the AceGUI window used to edit totem sets |
 | `Libs/` | Bundled third-party libraries: LibStub, CallbackHandler, Ace3 (Addon, Config, Console, DB, Event, GUI, Locale), LibKeyBound-1.0, LibSharedMedia-3.0, LibDataBroker-1.1. LibBars-1.0 is no longer used |
+| `Tests/` | Offline tests that run under Lua 5.1 against mocked WoW APIs (see "Development notes"). The game doesn't load them |
 | `Changelog-Yata-4.7.5.txt` | Packager changelog from the original SVN repository |
 
 ## Architecture
@@ -132,7 +133,7 @@ Some user-facing strings are still hard-coded in English and do not go through t
 
 ## Development notes
 
-There is no build step or test suite. To test a change, copy the folder into the AddOns directory and run `/reload` in game. Lua errors are easiest to see with an error-display addon such as BugSack, or with `/console scriptErrors 1`. Blizzard's UI source for each client flavour is published on the `forever`, `live` and other branches of the wow-ui-source mirror, and `Blizzard_APIDocumentationGenerated` in that source is the best API reference.
+There is no build step. `Tests/` has offline tests that run under Lua 5.1 or LuaJIT (the game's Lua version) against mocked WoW APIs. Run them with `lua5.1 Tests/run.lua` from the repository root. They check the totem duration bars in and out of combat, compile every secure snippet, run the bar's call-indicator snippet, and load each locale as a client in that locale would. They can't replace the game client, so also test a change by copying the folder into the AddOns directory and running `/reload` in game. Lua errors are easiest to see with an error-display addon such as BugSack, or with `/console scriptErrors 1`. Blizzard's UI source for each client flavour is published on the `forever`, `live` and other branches of the wow-ui-source mirror, and `Blizzard_APIDocumentationGenerated` in that source is the best API reference.
 
 Known issues:
 
