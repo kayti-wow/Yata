@@ -11,7 +11,7 @@ Forever keeps the Cataclysm multicast totem bar (`GetMultiCastTotemSpells`, `TOT
 
 ## AI usage
 
-This README and the WoW Forever port (5.0.0-forever) were developed with Claude, Anthropic's AI model. That covers the code changes for Forever, the bug fixes since, and the offline tests in `Tests/`. The commits involved say so in their message or carry a `Co-Authored-By: Claude` trailer. The original addon, up to 4.7.5 (2011), is the work of Tornhoof and Kaytikat. The AI-assisted changes were checked against Blizzard's Forever UI source and with the offline tests, but haven't been tested in game yet.
+The WoW Forever port of this addon (5.0.0-forever) was developed with the assistance of Claude code. That covers the code changes for Forever, the bug fixes since, and the offline tests in `Tests/`. The commits involved say so in their message or carry a `Co-Authored-By: Claude` trailer. The original addon, up to 4.7.5 (2011), is the work of Tornhoof and Kaytikat.
 
 ## Installation
 
