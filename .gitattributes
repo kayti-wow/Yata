@@ -1,0 +1,3 @@
+# Store text files with LF line endings in the repository, whatever the
+# working copy uses (the AddOns folder is often edited from Windows)
+* text=auto

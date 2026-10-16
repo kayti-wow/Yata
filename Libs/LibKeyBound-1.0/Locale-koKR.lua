@@ -7,7 +7,7 @@ if (GetLocale() ~= "koKR") then
 	return
 end
 
-local REVISION = 90000 + tonumber(("$Revision: 92 $"):match("%d+"))
+local REVISION = 90000 + tonumber(("$Revision$"):match("%d+"))
 if (LibKeyBoundLocale10 and REVISION <= LibKeyBoundLocale10.REVISION) then
 	return
 end

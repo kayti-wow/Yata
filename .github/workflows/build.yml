@@ -1,0 +1,62 @@
+name: Build
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install luacheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua-check
+
+      - name: Run luacheck
+        run: luacheck . --no-color
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Lua 5.1
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lua5.1
+
+      - name: Run tests
+        run: lua5.1 Tests/run.lua
+
+  release:
+    # Package and publish only for tags, once lint and tests pass
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the GitHub release
+    env:
+      # Each upload is skipped when its token is not set. CurseForge also needs
+      # a numeric "## X-Curse-Project-ID:" in Yata.toc, and Wago needs "## X-Wago-ID:".
+      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+      WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+      GH_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the packager builds the changelog from git history
+
+      - name: Package and publish
+        uses: BigWigsMods/packager@v2
+
+      - name: Upload zip as a workflow artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: Yata-${{ github.ref_name }}
+          path: .release/*.zip

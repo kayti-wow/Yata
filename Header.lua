@@ -1,9 +1,15 @@
-﻿if select(2, UnitClass('player')) ~= "SHAMAN" then
+﻿local _, ns = ...
+
+if select(2, UnitClass('player')) ~= "SHAMAN" then
 	return
 end
 
-Header = CreateFrame("Frame")
+local Yata = ns.Yata
+local SPELL_GROUP_CALL, SPELL_GROUP_IMBUE = ns.SPELL_GROUP_CALL, ns.SPELL_GROUP_IMBUE
+
+local Header = CreateFrame("Frame")
 Header.__index = Header
+ns.Header = Header
 
 function Header:Create(id, parent)
 	local name = "YataElementHeader" .. id

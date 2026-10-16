@@ -7,7 +7,7 @@ if (GetLocale() ~= "zhCN") then
 	return
 end
 
-local REVISION = 90000 + tonumber(("$Revision: 97 $"):match("%d+"))
+local REVISION = 90000 + tonumber(("$Revision$"):match("%d+"))
 if (LibKeyBoundLocale10 and REVISION <= LibKeyBoundLocale10.REVISION) then
 	return
 end
