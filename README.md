@@ -153,3 +153,7 @@ Known issues:
 ## Credits
 
 Originally written by Tornhoof and later maintained by Kaytikat (kayti-wow on github). It was distributed on Curse as project `yata`. The bundled libraries are the work of their respective authors (Ace3 team, LibKeyBound, LibSharedMedia and LibDataBroker contributors). The keybinding-mode and broker code is adapted from Nevcairiel's Bartender4.
+
+## License
+
+Yata is released under the [MIT License](LICENSE). The libraries in `Libs/` are third-party code and keep their own licences: Ace3 and CallbackHandler use the Ace3 BSD-style licence, LibSharedMedia-3.0 is LGPL v2.1, and LibKeyBound-1.0 and LibDataBroker-1.1 are distributed under their upstream terms.
