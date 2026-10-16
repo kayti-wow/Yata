@@ -10,9 +10,8 @@
 ## Version: @project-version@
 ## X-Embeds: Ace3, LibSharedMedia-3.0, LibKeyBound-1.0
 ## X-LoadOn-Class: SHAMAN
-## X-Curse-Project-Name: Yata
-## X-Curse-Project-ID: yata
-## X-Curse-Repository-ID: wow/yata/mainline
+## X-Curse-Project-Name: yata-forever
+## X-Curse-Project-ID: 1748365
 embeds.xml
 Libs\LibDataBroker-1.1.lua
 Localization\enUS.lua
