@@ -142,4 +142,4 @@ Known issues:
 
 ## Credits
 
-Originally written by Tornhoof and later maintained by Kaytikat. It was distributed on Curse as project `yata`. The bundled libraries are the work of their respective authors (Ace3 team, LibKeyBound, LibSharedMedia and LibDataBroker contributors). The keybinding-mode and broker code is adapted from Nevcairiel's Bartender4.
+Originally written by Tornhoof and later maintained by Kaytikat (kayti-wow on github). It was distributed on Curse as project `yata`. The bundled libraries are the work of their respective authors (Ace3 team, LibKeyBound, LibSharedMedia and LibDataBroker contributors). The keybinding-mode and broker code is adapted from Nevcairiel's Bartender4.
