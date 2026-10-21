@@ -1,7 +1,7 @@
 --- AceConfigDialog-3.0 generates AceGUI-3.0 based windows based on option tables.
 -- @class file
 -- @name AceConfigDialog-3.0
--- @release $Id$
+-- @release $Id: AceConfigDialog-3.0.lua 1409 2026-09-03 22:41:24Z funkehdude $
 
 local LibStub = LibStub
 local gui = LibStub("AceGUI-3.0")

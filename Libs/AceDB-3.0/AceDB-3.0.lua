@@ -40,7 +40,7 @@
 -- end
 -- @class file
 -- @name AceDB-3.0.lua
--- @release $Id$
+-- @release $Id: AceDB-3.0.lua 1419 2026-09-25 11:47:59Z nevcairiel $
 local ACEDB_MAJOR, ACEDB_MINOR = "AceDB-3.0", 39
 local AceDB = LibStub:NewLibrary(ACEDB_MAJOR, ACEDB_MINOR)
 
