@@ -3,7 +3,7 @@
 		English
 --]]
 
-local REVISION = 90000 + tonumber(("$Revision$"):match("%d+"))
+local REVISION = 90000 + (tonumber(("$Revision$"):match("%d+")) or 0)
 if (LibKeyBoundBaseLocale10 and REVISION <= LibKeyBoundBaseLocale10.BASEREVISION) then
 	return
 end
