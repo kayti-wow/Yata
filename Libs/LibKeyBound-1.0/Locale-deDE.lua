@@ -1,4 +1,4 @@
-﻿--[[
+--[[
 	LibKeyBound-1.0 localization file
 		Deutch by Gamefaq
 --]]
@@ -7,7 +7,7 @@ if (GetLocale() ~= "deDE") then
 	return
 end
 
-local REVISION = 90000 + (tonumber(("$Revision$"):match("%d+")) or 0)
+local REVISION = 90000 + tonumber(("$Revision: 108 $"):match("%d+"))
 if (LibKeyBoundLocale10 and REVISION <= LibKeyBoundLocale10.REVISION) then
 	return
 end
