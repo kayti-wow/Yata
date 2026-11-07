@@ -88,14 +88,10 @@ local function AddTotem(data, totem)
 	table.insert(data[totem.Name], totem)
 end
 
-function Yata:GatherTotemData()
-	if self.TotemData then
-		table.wipe(self.TotemData)
-	end
-
-	self.TotemData = {}
-
-	local actionBase = self:GetMultiCastActionBase()
+-- Reads every totem, Call spell and imbue the player knows, in bar order
+local function CollectTotems()
+	local data = {}
+	local actionBase = Yata:GetMultiCastActionBase()
 	local count = 0
 
 	for k, slot in ipairs(TotemSlots) do
@@ -112,7 +108,7 @@ function Yata:GatherTotemData()
 				totem.SpellGroup = SlotGroups[slot]
 				totem.Slot = slot
 
-				AddTotem(self.TotemData, totem)
+				AddTotem(data, totem)
 			end
 		end
 	end
@@ -129,7 +125,7 @@ function Yata:GatherTotemData()
 			totem.CallIndex = k
 			totem.CallActionBase = actionBase + 1 + ((k - 1) * MAX_TOTEMS)
 
-			AddTotem(self.TotemData, totem)
+			AddTotem(data, totem)
 			count = count + 1
 		end
 	end
@@ -144,10 +140,33 @@ function Yata:GatherTotemData()
 			totem.Texture = icon
 			totem.SpellGroup = SPELL_GROUP_IMBUE
 
-			AddTotem(self.TotemData, totem)
+			AddTotem(data, totem)
 			count = count + 1
 		end
 	end
 
-	self.TotemData.Count = count
+	data.Count = count
+	return data
+end
+
+-- A string that changes whenever the spells on the bar would change
+local function Signature(data)
+	local parts = {}
+	for _, name in ipairs(data) do
+		for _, totem in ipairs(data[name]) do
+			table.insert(parts, totem.Name .. ":" .. tostring(totem.GlobalId))
+		end
+	end
+	return table.concat(parts, ",")
+end
+
+function Yata:GatherTotemData()
+	self.TotemData = CollectTotems()
+	self.TotemSignature = Signature(self.TotemData)
+end
+
+-- True when the client now reports different spells from the ones the bar was
+-- built with. At first login the spell data arrives after the bar is built.
+function Yata:TotemDataChanged()
+	return Signature(CollectTotems()) ~= self.TotemSignature
 end

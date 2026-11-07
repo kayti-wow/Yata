@@ -29,7 +29,8 @@ function TotemBar:New()
 	Yata:InitTotems()
 	Yata:InitTotemSets()
 	
-	self.Set = Yata:GetTotemSet(nil) -- Retrieve the current set
+	-- The current set, matched up with the spells known right now
+	self.Set = Yata:FixTotemSet(Yata:deepcopy(Yata:GetTotemSet(nil)))
 	
 	-- Need to get the group order then iterate through the other items
 	for k, spellgroup in ipairs(self.Set["GroupOrder"]) do
@@ -516,11 +517,14 @@ function TotemBar:EditMacro(force, old, new)
 					end
 				end
 			end
-			macro = macro..table.concat(totems, ", ")
-			if macroindex > 0 then
-				EditMacro(macroindex, MACRO_NAME, MACRO_ICON, macro)
-			elseif hasRoom then
-				CreateMacro(MACRO_NAME, MACRO_ICON, macro, true)
+			-- With no totems known yet (early in login) keep the macro as it is
+			if #totems > 0 then
+				macro = macro..table.concat(totems, ", ")
+				if macroindex > 0 then
+					EditMacro(macroindex, MACRO_NAME, MACRO_ICON, macro)
+				elseif hasRoom then
+					CreateMacro(MACRO_NAME, MACRO_ICON, macro, true)
+				end
 			end
 		elseif macroindex > 0 and old and new then
 			local name, texture, macro = GetMacroInfo(macroindex)

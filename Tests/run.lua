@@ -7,7 +7,7 @@ local interpreter = arg[-1] or "lua5.1"
 local rootArgument = arg[1] and string.format(' "%s"', arg[1]) or ""
 
 local failed = 0
-for _, test in ipairs({ "timer_test.lua", "snippet_test.lua", "locale_test.lua" }) do
+for _, test in ipairs({ "timer_test.lua", "snippet_test.lua", "locale_test.lua", "login_test.lua" }) do
 	print("== " .. test)
 	io.stdout:flush()
 	-- Lua 5.1 returns the exit status; LuaJIT built with 5.2 compatibility returns true

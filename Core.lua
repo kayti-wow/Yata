@@ -153,6 +153,10 @@ function Yata:OnEnable()
 
 	self:RegisterEvent("LEARNED_SPELL_IN_SKILL_LINE", "SpellLearned")
 	self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED", "Reload") -- just to be sure
+	-- At first login the totem spells aren't known yet when the bar is built,
+	-- so rebuild once they turn up
+	self:RegisterEvent("SPELLS_CHANGED", "CheckTotemData")
+	self:RegisterEvent("PLAYER_ENTERING_WORLD", "CheckTotemData")
 
 	self:UpdateBlizzardBar()
 
@@ -213,16 +217,39 @@ function Yata:SpellLearned(event, spellId, skillLineIndex, isGuildPerkSpell)
 	end
 end
 
+-- Rebuilds the bar if the client now reports different totems from the ones
+-- it was built with
+function Yata:CheckTotemData()
+	if InCombatLockdown() then
+		self.totemCheckPending = true
+		self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnCombatEnded")
+		return
+	end
+	self.totemCheckPending = nil
+
+	if self:TotemDataChanged() then
+		self:Reload()
+	end
+end
+
+function Yata:OnCombatEnded()
+	self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+	if self.reloadPending then
+		self:Reload()
+	elseif self.totemCheckPending then
+		self:CheckTotemData()
+	end
+end
+
 function Yata:Reload()
 	-- Rebuilding the bar touches secure frames, so wait until combat ends
 	if InCombatLockdown() then
-		if not self.reloadPending then
-			self.reloadPending = true
-			self:RegisterEvent("PLAYER_REGEN_ENABLED", "Reload")
-		end
+		self.reloadPending = true
+		self:RegisterEvent("PLAYER_REGEN_ENABLED", "OnCombatEnded")
 		return
 	end
 	self.reloadPending = nil
+	self.totemCheckPending = nil
 
 	self:Print("Reloading")
 

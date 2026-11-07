@@ -8,12 +8,11 @@ local Yata = ns.Yata
 local SpellGroups = ns.SpellGroups
 local TOTEM_SET_PRIMARY_DEFAULT = ns.TOTEM_SET_PRIMARY_DEFAULT
 
+-- Saved sets aren't cleaned up here: the bar works from a fixed copy (see
+-- TotemBar:New). Otherwise a spell the client hasn't reported yet, as happens
+-- at first login, would lose its place in every set.
 function Yata:InitTotemSets()
-	if self.CurrentDb.Sets then
-		for i,b in pairs(self.CurrentDb.Sets) do
-			self.CurrentDb.Sets[i] = self:FixTotemSet(b)
-		end
-	else 
+	if not self.CurrentDb.Sets then
 		self.CurrentDb.Sets = {}
 		self.CurrentDb.Sets[TOTEM_SET_PRIMARY_DEFAULT] = self:FixTotemSet()
 	end
