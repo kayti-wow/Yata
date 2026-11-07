@@ -416,16 +416,18 @@ function Yata:UpdateTotemSlot(slot)
 		return
 	end
 
+	local haveTotem, name, _, _, icon, _, spellId = GetTotemInfo(slot)
+	-- The predicate can say a slot is readable while GetTotemInfo still hands
+	-- back secrets, so check the values themselves too
 	local secret = IsTotemSlotSecret(slot)
-	local haveTotem, name, icon, button
+		or (issecretvalue and (issecretvalue(haveTotem) or issecretvalue(name) or issecretvalue(spellId)))
+	local button
 
 	if secret then
 		-- We can't read which totem this is, so trust the last one we saw cast
-		_, name, _, _, icon = GetTotemInfo(slot)
+		haveTotem = nil
 		button = FindButton(castTotems[slot])
 	else
-		local spellId
-		haveTotem, name, _, _, icon, _, spellId = GetTotemInfo(slot)
 		haveTotem = haveTotem and name ~= nil and name ~= ""
 		if haveTotem then
 			button = FindButton(spellId, name) or FindButton(castTotems[slot])

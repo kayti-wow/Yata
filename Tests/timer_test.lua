@@ -59,7 +59,10 @@ C_Timer = { NewTicker = function() return { Cancel = function() end } end }
 function GetActionInfo() return nil end
 
 -- What the client reports for each totem slot
-local slots, secretSlots = {}, false
+local slots, secretSlots, secretValues = {}, false, false
+-- Stands in for a secret value: only issecretvalue can tell it apart
+local SECRET = newproxy()
+function issecretvalue(value) return value == SECRET end
 local function setSlot(slot, name, duration, spellId)
 	slots[slot] = { name = name or "", duration = duration or 0, spellId = spellId or 0 }
 end
@@ -68,6 +71,9 @@ for slot = 1, 4 do setSlot(slot) end
 C_Secrets = { ShouldTotemSlotBeSecret = function() return secretSlots end }
 function GetTotemInfo(slot)
 	local s = slots[slot]
+	if secretValues then
+		return SECRET, SECRET, SECRET, SECRET, SECRET, SECRET, SECRET
+	end
 	-- As Blizzard's own totem UI expects, haveTotem is true for every usable
 	-- slot, whether or not a totem is down
 	return true, s.name, 0, s.duration, 136000 + slot, 1, s.spellId
@@ -142,5 +148,15 @@ if events.ADDON_RESTRICTION_STATE_CHANGED then
 	check(durationBar(1) == nil and durationBar(3) == nil, "a restriction lifting releases empty slots' bars")
 	check(visible(durationBar(2)), "a restriction lifting keeps the bar of a totem that is down")
 end
+
+-- The predicate can say a slot is readable while GetTotemInfo still returns secrets
+secretValues = true
+setSlot(2)
+fire("PLAYER_TOTEM_UPDATE", 2)
+check(not visible(durationBar(2)), "secret values despite the predicate: an expired totem's bar is hidden")
+setSlot(2, "Stoneskin Totem", 120, 8071)
+fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-guid", 8071)
+check(visible(durationBar(2)), "secret values despite the predicate: a newly cast totem has a visible bar")
+secretValues = false
 
 helpers.finish()
