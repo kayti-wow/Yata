@@ -16,6 +16,12 @@ function Widget:SetAlphaFromBoolean(value, alphaIfTrue, alphaIfFalse)
 	assert(type(value) == "boolean", "SetAlphaFromBoolean needs a boolean, got " .. type(value))
 	self.alpha = value and alphaIfTrue or alphaIfFalse
 end
+function Widget:SetTimerDuration(duration)
+	assert(duration ~= nil, "Usage: self:SetTimerDuration(duration [, interpolation, direction])")
+end
+function Widget:SetCooldownFromDurationObject(duration)
+	assert(duration ~= nil, "Usage: self:SetCooldownFromDurationObject(duration [, clearIfZero])")
+end
 function Widget:Show() self.shown = true end
 function Widget:Hide() self.shown = false end
 function Widget:CreateTexture() return Widget.new("Texture") end
@@ -78,7 +84,9 @@ function GetTotemInfo(slot)
 	-- slot, whether or not a totem is down
 	return true, s.name, 0, s.duration, 136000 + slot, 1, s.spellId
 end
+local noDuration = false
 function GetTotemDuration(slot)
+	if noDuration then return nil end
 	local s = slots[slot]
 	return { IsZero = function() return s.duration == 0 end }
 end
@@ -157,6 +165,14 @@ check(not visible(durationBar(2)), "secret values despite the predicate: an expi
 setSlot(2, "Stoneskin Totem", 120, 8071)
 fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-guid", 8071)
 check(visible(durationBar(2)), "secret values despite the predicate: a newly cast totem has a visible bar")
+
+-- GetTotemDuration can return nothing despite its documentation
+noDuration = true
+local ok, err = pcall(fire, "ADDON_RESTRICTION_STATE_CHANGED", 3, Enum.AddOnRestrictionState.Inactive)
+check(ok, "no duration object: refreshing the slots doesn't error (" .. tostring(err) .. ")")
+fire("PLAYER_TOTEM_UPDATE", 2)
+check(not visible(durationBar(2)), "no duration object: the slot has no bar")
+noDuration = false
 secretValues = false
 
 helpers.finish()

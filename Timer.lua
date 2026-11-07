@@ -443,10 +443,12 @@ function Yata:UpdateTotemSlot(slot)
 		self:UpdateButtonCooldown(previous)
 	end
 
+	-- Documented as never nil, but it can come back empty (seen when an addon
+	-- restriction lifts), and the timer widgets reject a missing duration
 	local duration = GetTotemDuration(slot)
 
 	if ShowsBars() then
-		if secret or haveTotem then
+		if duration and (secret or haveTotem) then
 			local bar = self.DurationGroup:AcquireBar(slot)
 			local color = ElementColors[button and button.Totem.SpellGroup] or ElementColors.Earth
 			SetupBar(bar, name, icon, duration, color)
@@ -460,7 +462,7 @@ function Yata:UpdateTotemSlot(slot)
 		end
 	end
 
-	if ShowsButtons() and button then
+	if ShowsButtons() and button and duration then
 		button.Cooldown:SetCooldownFromDurationObject(duration, true)
 	end
 end
