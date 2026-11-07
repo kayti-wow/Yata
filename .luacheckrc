@@ -60,6 +60,7 @@ local wowGlobals = {
 	"GetTotemDuration",
 	"GetTotemInfo",
 	"InCombatLockdown",
+	"issecretvalue",
 	"IsModifiedClick",
 	"UnitClass",
 
