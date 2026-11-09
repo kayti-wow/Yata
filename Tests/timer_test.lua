@@ -26,7 +26,11 @@ function Widget:Show() self.shown = true end
 function Widget:Hide() self.shown = false end
 function Widget:CreateTexture() return Widget.new("Texture") end
 function Widget:CreateFontString() return Widget.new("FontString") end
-function Widget:SetFont() return true end
+function Widget:SetFont(font, size, flags)
+	self.fontFlags = flags
+	return true
+end
+function Widget:SetShadowOffset(x, y) self.shadowX, self.shadowY = x, y end
 function Widget:GetLeft() return 0 end
 function Widget:GetBottom() return 0 end
 
@@ -174,5 +178,20 @@ fire("PLAYER_TOTEM_UPDATE", 2)
 check(not visible(durationBar(2)), "no duration object: the slot has no bar")
 noDuration = false
 secretValues = false
+
+-- Text outline and shadow options reach the bar text
+Yata.CurrentDb.TimerFontOutline = "THICKOUTLINE"
+Yata.CurrentDb.TimerFontShadow = true
+setSlot(1, "Searing Totem", 60, 3599)
+fire("PLAYER_TOTEM_UPDATE", 1)
+Yata:LoadTimerConfig()
+local time = durationBar(1).Time
+check(time.fontFlags == "THICKOUTLINE", "the outline option sets the font flags")
+check(time.shadowX == 1 and time.shadowY == -1, "the shadow option offsets the shadow")
+Yata.CurrentDb.TimerFontOutline = ""
+Yata.CurrentDb.TimerFontShadow = false
+Yata:LoadTimerConfig()
+check(time.fontFlags == "", "no outline clears the font flags")
+check(time.shadowX == 0 and time.shadowY == 0, "no shadow hides the shadow")
 
 helpers.finish()

@@ -11,6 +11,7 @@ local LDB = LibStub("LibDataBroker-1.1", true)
 local L = LibStub("AceLocale-3.0"):GetLocale("Yata")
 local resetkeys = {"shift", "ctrl", "alt", "none"}
 local stratum = {"LOW", "MEDIUM", "HIGH"}
+local fontOutlines = {"", "OUTLINE", "THICKOUTLINE"}
 function Yata:PopulateOptions()
 	local options = {
 	    name = "Yata",
@@ -411,7 +412,26 @@ function Yata:PopulateOptions()
 						set = function(info, value) Yata.CurrentDb.TimerStrata = stratum[value]; Yata:ResetTimers() end,
 						disabled = function() return (InCombatLockdown() or self.CurrentDb.TimerEnabled == false or self.CurrentDb.TimerType == 2) end,
 						order = 11,
-					},				
+					},
+					timerfontoutline = {
+						name = L["TimerFontOutline"],
+						desc = L["TimerFontOutlineDesc"],
+						type = "select",
+						values = { L["TimerFontOutlineNone"], L["TimerFontOutlineThin"], L["TimerFontOutlineThick"] },
+						get = function() for k,v in ipairs(fontOutlines) do if v == self.CurrentDb.TimerFontOutline then return k end end end,
+						set = function(info, value) self.CurrentDb.TimerFontOutline = fontOutlines[value]; Yata:ResetTimers() end,
+						disabled = function() return (InCombatLockdown() or self.CurrentDb.TimerEnabled == false or self.CurrentDb.TimerType == 2) end,
+						order = 12,
+					},
+					timerfontshadow = {
+						name = L["TimerFontShadow"],
+						desc = L["TimerFontShadowDesc"],
+						type = "toggle",
+						get = function() return self.CurrentDb.TimerFontShadow end,
+						set = function(info, value) self.CurrentDb.TimerFontShadow = value; Yata:ResetTimers() end,
+						disabled = function() return (InCombatLockdown() or self.CurrentDb.TimerEnabled == false or self.CurrentDb.TimerType == 2) end,
+						order = 13,
+					},
 				},
 				order = 2,
 			},

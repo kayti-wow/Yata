@@ -110,6 +110,8 @@ function BarGroup:Configure(db)
 	self.GrowUp = db.TimerGrowUp
 	self.Font = LSM and LSM:Fetch("font", db.TimerFont, true) or STANDARD_TEXT_FONT
 	self.FontSize = db.TimerFontSize
+	self.FontOutline = db.TimerFontOutline or ""
+	self.FontShadow = db.TimerFontShadow
 	self.Texture = LSM and LSM:Fetch("statusbar", db.TimerBarSkin, true) or "Interface\\TargetingFrame\\UI-StatusBar"
 
 	self.Anchor:SetScale(db.TimerScale)
@@ -154,8 +156,14 @@ function BarGroup:StyleBar(bar)
 	bar:SetReverseFill(self.Reverse)
 
 	for _, text in ipairs({ bar.Label, bar.Time }) do
-		if not text:SetFont(self.Font, self.FontSize, "") then
-			text:SetFont(STANDARD_TEXT_FONT, self.FontSize, "")
+		if not text:SetFont(self.Font, self.FontSize, self.FontOutline) then
+			text:SetFont(STANDARD_TEXT_FONT, self.FontSize, self.FontOutline)
+		end
+		text:SetShadowColor(0, 0, 0, 1)
+		if self.FontShadow then
+			text:SetShadowOffset(1, -1)
+		else
+			text:SetShadowOffset(0, 0)
 		end
 		text:ClearAllPoints()
 	end
