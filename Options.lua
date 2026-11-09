@@ -12,6 +12,177 @@ local L = LibStub("AceLocale-3.0"):GetLocale("Yata")
 local resetkeys = {"shift", "ctrl", "alt", "none"}
 local stratum = {"LOW", "MEDIUM", "HIGH"}
 local fontOutlines = {"", "OUTLINE", "THICKOUTLINE"}
+
+-- Options for one group of timer bars. Each option is keyed by the setting it
+-- changes in that group's table, CurrentDb[dbKey].
+local function TimerBarOptions(dbKey, name, desc, order)
+	local function settings() return Yata.CurrentDb[dbKey] end
+	local function get(info) return settings()[info[#info]] end
+	local function set(info, value) settings()[info[#info]] = value; Yata:ResetTimers() end
+	-- select options backed by a list store the list entry, not its index
+	local function getFrom(list)
+		return function(info)
+			local current = settings()[info[#info]]
+			for k, v in ipairs(type(list) == "function" and list() or list) do
+				if v == current then return k end
+			end
+		end
+	end
+	local function setFrom(list)
+		return function(info, value)
+			set(info, (type(list) == "function" and list() or list)[value])
+		end
+	end
+
+	local group = {
+		name = name,
+		desc = desc,
+		type = "group",
+		order = order,
+		disabled = function() return (InCombatLockdown() or Yata.CurrentDb.TimerEnabled == false or Yata.CurrentDb.TimerType == 2) end,
+		args = {
+			Orientation = {
+				name = L["TimerOrientation"],
+				desc = L["TimerOrientationDesc"],
+				type = "select",
+				width = "double",
+				values = { L["TLTR"], L["TBTT"], L["TRTL"], L["TTTB"] },
+				get = get,
+				set = set,
+				order = 1,
+			},
+			Scale = {
+				name = L["TimerScale"],
+				desc = L["TimerScaleDesc"],
+				type = "range",
+				width = "double",
+				min = 0.5,
+				max = 2.5,
+				step = 0.01,
+				bigStep = 0.05,
+				get = get,
+				set = set,
+				order = 4,
+			},
+			Spacing = {
+				name = L["TimerSpacing"],
+				desc = L["TimerSpacingDesc"],
+				type = "range",
+				min = 0,
+				max = 20,
+				step = 1,
+				get = get,
+				set = set,
+				order = 5,
+			},
+			FontSize = {
+				name = L["TimerFontSize"],
+				desc = L["TimerFontSizeDesc"],
+				type = "range",
+				min = 4,
+				max = 25,
+				step = 1,
+				get = get,
+				set = set,
+				order = 6,
+			},
+			Thickness = {
+				name = L["TimerThickness"],
+				desc = L["TimerThicknessDesc"],
+				type = "range",
+				min = 5,
+				max = 100,
+				step = 1,
+				bigStep = 5,
+				get = get,
+				set = set,
+				order = 7,
+			},
+			Length = {
+				name = L["TimerLength"],
+				desc = L["TimerLengthDesc"],
+				type = "range",
+				min = 5,
+				max = 500,
+				step = 1,
+				bigStep = 5,
+				get = get,
+				set = set,
+				order = 8,
+			},
+			GrowUp = {
+				name = L["TimerGrowUp"],
+				desc = L["TimerGrowUpDesc"],
+				type = "toggle",
+				width = "full",
+				get = get,
+				set = set,
+				order = 9,
+			},
+			Strata = {
+				name = L["TimerStrata"],
+				desc = L["TimerStrataDesc"],
+				type = "select",
+				width = "double",
+				values = stratum,
+				get = getFrom(stratum),
+				set = setFrom(stratum),
+				order = 10,
+			},
+			FontOutline = {
+				name = L["TimerFontOutline"],
+				desc = L["TimerFontOutlineDesc"],
+				type = "select",
+				values = { L["TimerFontOutlineNone"], L["TimerFontOutlineThin"], L["TimerFontOutlineThick"] },
+				get = getFrom(fontOutlines),
+				set = setFrom(fontOutlines),
+				order = 11,
+			},
+			FontShadow = {
+				name = L["TimerFontShadow"],
+				desc = L["TimerFontShadowDesc"],
+				type = "toggle",
+				get = get,
+				set = set,
+				order = 12,
+			},
+			ShortDuration = {
+				name = L["TimerShortDuration"],
+				desc = L["TimerShortDurationDesc"],
+				type = "toggle",
+				get = get,
+				set = set,
+				order = 13,
+			},
+		},
+	}
+
+	if LSM then
+		local function textures() return LSM:List("statusbar") end
+		local function fonts() return LSM:List("font") end
+		group.args.BarSkin = {
+			name = L["TimerTexture"],
+			desc = L["TimerTextureDesc"],
+			type = "select",
+			values = textures,
+			get = getFrom(textures),
+			set = setFrom(textures),
+			order = 2,
+		}
+		group.args.Font = {
+			name = L["TimerFont"],
+			desc = L["TimerFontDesc"],
+			type = "select",
+			values = fonts,
+			get = getFrom(fonts),
+			set = setFrom(fonts),
+			order = 3,
+		}
+	end
+
+	return group
+end
+
 function Yata:PopulateOptions()
 	local options = {
 	    name = "Yata",
@@ -302,145 +473,8 @@ function Yata:PopulateOptions()
 						order = 1,
 						width = "double",
 					},
-					timerbar = { 
-						name = L["TimerBar"], 
-						type="header", 
-						order = 2,
-					},
-					timerbarorientation = {
-						name = L["TimerOrientation"],
-						desc = L["TimerOrientationDesc"],
-						type = "select",
-						width = "double",
-						values = { L["TLTR"], L["TBTT"], L["TRTL"], L["TTTB"] },
-						get = function() return self.CurrentDb.TimerOrientation end,
-						set = function(info, value) self.CurrentDb.TimerOrientation = value; Yata:ResetTimers() end,
-						disabled = function() return (InCombatLockdown() or self.CurrentDb.TimerEnabled == false or self.CurrentDb.TimerType == 2) end,
-						order = 3,
-					},
-					timerscale = 	{
-						name = L["TimerScale"],
-						desc = L["TimerScaleDesc"],
-						type = "range",
-						get = function() return self.CurrentDb.TimerScale end,
-						set = function(info, value)
-							self.CurrentDb.TimerScale = value 
-							self:SetTimerScale(self.CurrentDb.TimerScale)
-							Yata:ResetTimers()
-						end,
-						min = 0.5,
-						max = 2.5,
-						step = 0.01,
-						bigStep = 0.05,
-						width = "double",
-						disabled = function() return (InCombatLockdown() or self.CurrentDb.TimerEnabled == false or self.CurrentDb.TimerType == 2) end,
-						order = 5,
-					},				
-					timerspacing = {
-						name = L["TimerSpacing"],
-						desc = L["TimerSpacingDesc"],
-						type = "range",
-						width = "normal",
-						min = 0.0,
-						max = 20,
-						get = function() return self.CurrentDb.TimerSpacing end,
-						set = function(info, value) self.CurrentDb.TimerSpacing = value; Yata:ResetTimers() end,
-						step = 1,
-						bigStep = 1,
-						disabled = function() return (InCombatLockdown() or self.CurrentDb.TimerEnabled == false or self.CurrentDb.TimerType == 2) end,
-						order = 6
-					},	
-					timerfontsize = {
-						name = L["TimerFontSize"],
-						desc = L["TimerFontSizeDesc"],
-						type = "range",
-						width = "normal",
-						min = 4,
-						max = 25,
-						step = 1,
-						bigStep = 1,
-						get = function() return self.CurrentDb.TimerFontSize end,
-						set = function(info, value) self.CurrentDb.TimerFontSize = value; Yata:ResetTimers() end,
-						disabled = function() return (InCombatLockdown() or self.CurrentDb.TimerEnabled == false or self.CurrentDb.TimerType == 2) end,
-						order = 7
-					},	
-					timerbarthickness = {
-						name = L["TimerThickness"],
-						desc = L["TimerThicknessDesc"],
-						type = "range",
-						width = "normal",
-						min = 5,
-						max = 100,
-						step = 1,
-						bigStep = 5,
-						get = function() return self.CurrentDb.TimerThickness end,
-						set = function(info, value) self.CurrentDb.TimerThickness = value; Yata:ResetTimers() end,
-						disabled = function() return (InCombatLockdown() or self.CurrentDb.TimerEnabled == false or self.CurrentDb.TimerType == 2) end,
-						order = 8
-					},		
-					timerbarlength = {
-						name = L["TimerLength"],
-						desc = L["TimerLengthDesc"],
-						type = "range",
-						width = "normal",
-						min = 5,
-						max = 500,
-						step = 1,
-						bigStep = 5,
-						get = function() return self.CurrentDb.TimerLength end,
-						set = function(info, value) self.CurrentDb.TimerLength = value; Yata:ResetTimers() end,
-						disabled = function() return (InCombatLockdown() or self.CurrentDb.TimerEnabled == false or self.CurrentDb.TimerType == 2) end,
-						order = 9
-					},	
-					timergrowup = {
-						name = L["TimerGrowUp"],
-						desc = L["TimerGrowUpDesc"],
-						type = "toggle",
-						get = function() return self.CurrentDb.TimerGrowUp end,
-						set = function(info, value) self.CurrentDb.TimerGrowUp = value; Yata:ResetTimers() end,
-						disabled = function() return (InCombatLockdown() or self.CurrentDb.TimerEnabled == false or self.CurrentDb.TimerType == 2) end,
-						order = 10,
-						width = "full",
-					},	
-					timerstrata = {
-						name = L["TimerStrata"],
-						desc = L["TimerStrataDesc"],
-						type = "select",
-						width = "double",
-						values = stratum,
-						get = function() for k,v in ipairs(stratum) do if v == self.CurrentDb.TimerStrata then return k end end end,
-						set = function(info, value) Yata.CurrentDb.TimerStrata = stratum[value]; Yata:ResetTimers() end,
-						disabled = function() return (InCombatLockdown() or self.CurrentDb.TimerEnabled == false or self.CurrentDb.TimerType == 2) end,
-						order = 11,
-					},
-					timerfontoutline = {
-						name = L["TimerFontOutline"],
-						desc = L["TimerFontOutlineDesc"],
-						type = "select",
-						values = { L["TimerFontOutlineNone"], L["TimerFontOutlineThin"], L["TimerFontOutlineThick"] },
-						get = function() for k,v in ipairs(fontOutlines) do if v == self.CurrentDb.TimerFontOutline then return k end end end,
-						set = function(info, value) self.CurrentDb.TimerFontOutline = fontOutlines[value]; Yata:ResetTimers() end,
-						disabled = function() return (InCombatLockdown() or self.CurrentDb.TimerEnabled == false or self.CurrentDb.TimerType == 2) end,
-						order = 12,
-					},
-					timerfontshadow = {
-						name = L["TimerFontShadow"],
-						desc = L["TimerFontShadowDesc"],
-						type = "toggle",
-						get = function() return self.CurrentDb.TimerFontShadow end,
-						set = function(info, value) self.CurrentDb.TimerFontShadow = value; Yata:ResetTimers() end,
-						disabled = function() return (InCombatLockdown() or self.CurrentDb.TimerEnabled == false or self.CurrentDb.TimerType == 2) end,
-						order = 13,
-					},
-					timershortduration = {
-						name = L["TimerShortDuration"],
-						desc = L["TimerShortDurationDesc"],
-						type = "toggle",
-						get = function() return self.CurrentDb.TimerShortDuration end,
-						set = function(info, value) self.CurrentDb.TimerShortDuration = value; Yata:ResetTimers() end,
-						disabled = function() return (InCombatLockdown() or self.CurrentDb.TimerEnabled == false or self.CurrentDb.TimerType == 2) end,
-						order = 14,
-					},
+					durationbars = TimerBarOptions("DurationBars", L["TimerDurationBars"], L["TimerDurationBarsDesc"], 2),
+					cooldownbars = TimerBarOptions("CooldownBars", L["TimerCooldownBars"], L["TimerCooldownBarsDesc"], 3),
 				},
 				order = 2,
 			},
@@ -541,30 +575,6 @@ function Yata:PopulateOptions()
 			},
 		},
 	}
-	if LSM then
-		local timerbarskin = {
-			name = L["TimerTexture"],
-			desc = L["TimerTextureDesc"],
-			type = "select",
-			values = function() return LSM:List("statusbar") end,
-			get = function() for k,v in ipairs(LSM:List("statusbar")) do if v == self.CurrentDb.TimerBarSkin then return k end end end,
-			set = function(info, value) self.CurrentDb.TimerBarSkin = LSM:List("statusbar")[value] self:LoadTimerConfig() end,
-			disabled = function() return (InCombatLockdown() or self.CurrentDb.TimerEnabled == false or self.CurrentDb.TimerType == 2) end,
-			order = 4,
-		}
-		local timerbarfont = {
-			name = L["TimerFont"],
-			desc = L["TimerFontDesc"],
-			type = "select",
-			values = function() return LSM:List("font") end,
-			get = function() for k,v in ipairs(LSM:List("font")) do if v == self.CurrentDb.TimerFont then return k end end end,
-			set = function(info, value) self.CurrentDb.TimerFont = LSM:List("font")[value] self:LoadTimerConfig() end,
-			disabled = function() return (InCombatLockdown() or self.CurrentDb.TimerEnabled == false or self.CurrentDb.TimerType == 2) end,
-			order = 4,
-		}
-		options.args.totemtimers.args["timerbarskin"] = timerbarskin
-		options.args.totemtimers.args["timerbarfont"] = timerbarfont
-	end
 	return options
 end 
 

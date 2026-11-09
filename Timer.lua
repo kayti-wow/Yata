@@ -105,23 +105,24 @@ function BarGroup:GetPosition()
 	return self.Anchor:GetLeft(), self.Anchor:GetBottom()
 end
 
-function BarGroup:Configure(db)
-	local orientation = db.TimerOrientation -- 1 left to right, 2 bottom to top, 3 right to left, 4 top to bottom
+-- settings is the group's own table: CurrentDb.DurationBars or CurrentDb.CooldownBars
+function BarGroup:Configure(settings)
+	local orientation = settings.Orientation -- 1 left to right, 2 bottom to top, 3 right to left, 4 top to bottom
 	self.Horizontal = orientation == 1 or orientation == 3
 	self.Reverse = orientation == 3 or orientation == 4
-	self.Thickness = db.TimerThickness
-	self.Length = db.TimerLength
-	self.Spacing = db.TimerSpacing
-	self.GrowUp = db.TimerGrowUp
-	self.Font = LSM and LSM:Fetch("font", db.TimerFont, true) or STANDARD_TEXT_FONT
-	self.FontSize = db.TimerFontSize
-	self.FontOutline = db.TimerFontOutline or ""
-	self.FontShadow = db.TimerFontShadow
-	self.Formatter = db.TimerShortDuration and shortDurationFormatter or durationFormatter
-	self.Texture = LSM and LSM:Fetch("statusbar", db.TimerBarSkin, true) or "Interface\\TargetingFrame\\UI-StatusBar"
+	self.Thickness = settings.Thickness
+	self.Length = settings.Length
+	self.Spacing = settings.Spacing
+	self.GrowUp = settings.GrowUp
+	self.Font = LSM and LSM:Fetch("font", settings.Font, true) or STANDARD_TEXT_FONT
+	self.FontSize = settings.FontSize
+	self.FontOutline = settings.FontOutline or ""
+	self.FontShadow = settings.FontShadow
+	self.Formatter = settings.ShortDuration and shortDurationFormatter or durationFormatter
+	self.Texture = LSM and LSM:Fetch("statusbar", settings.BarSkin, true) or "Interface\\TargetingFrame\\UI-StatusBar"
 
-	self.Anchor:SetScale(db.TimerScale)
-	self.Anchor:SetFrameStrata(db.TimerStrata)
+	self.Anchor:SetScale(settings.Scale)
+	self.Anchor:SetFrameStrata(settings.Strata)
 	if self.Horizontal then
 		self.Anchor:SetSize(self.Length + self.Thickness, math.max(self.Thickness, 12))
 	else
@@ -291,13 +292,30 @@ function Yata:SaveTimerConfig()
 	self.CurrentDb.CooldownGroupPosition = { x = x, y = y }
 end
 
-function Yata:SetTimerScale(scale)
-	self.DurationGroup.Anchor:SetScale(scale)
-	self.CooldownGroup.Anchor:SetScale(scale)
+-- Bar settings used to be shared by both groups, as TimerScale, TimerFont and
+-- so on. Give each group its own copy of any the player had changed.
+local TIMER_BAR_SETTINGS = {
+	"Scale", "Orientation", "Thickness", "Length", "FontSize", "Font", "FontOutline",
+	"FontShadow", "ShortDuration", "Spacing", "GrowUp", "Strata", "BarSkin",
+}
+
+local function MigrateTimerSettings(db)
+	for _, key in ipairs(TIMER_BAR_SETTINGS) do
+		local old = rawget(db, "Timer" .. key)
+		if old ~= nil then
+			for _, group in ipairs({ db.DurationBars, db.CooldownBars }) do
+				if rawget(group, key) == nil then
+					group[key] = old
+				end
+			end
+			db["Timer" .. key] = nil
+		end
+	end
 end
 
 function Yata:LoadTimerConfig()
 	local db = self.CurrentDb
+	MigrateTimerSettings(db)
 	if db.DurationGroupPosition then
 		self.DurationGroup:SetPosition(db.DurationGroupPosition.x, db.DurationGroupPosition.y)
 	end
@@ -311,8 +329,8 @@ function Yata:LoadTimerConfig()
 		self.DurationGroup:ShowAnchor()
 		self.CooldownGroup:ShowAnchor()
 	end
-	self.DurationGroup:Configure(db)
-	self.CooldownGroup:Configure(db)
+	self.DurationGroup:Configure(db.DurationBars)
+	self.CooldownGroup:Configure(db.CooldownBars)
 end
 
 function Yata:ShowTimerAnchors()

@@ -106,11 +106,21 @@ C_Spell = {
 
 -- A stand-in for the addon object and its bar
 local events = {}
+-- As in AceDB, defaults show through a metatable until a setting is changed
+local barDefaults = {
+	Orientation = 1, Thickness = 10, Length = 100, Spacing = 0, GrowUp = true,
+	Font = "Friz Quadrata TT", FontSize = 8, FontOutline = "", FontShadow = false,
+	ShortDuration = false, BarSkin = "Blizzard", Scale = 1, Strata = "LOW",
+}
+local function BarSettings()
+	return setmetatable({}, { __index = barDefaults })
+end
 local Yata = {
 	CurrentDb = {
-		TimerEnabled = true, TimerType = 1, TimerOrientation = 1, TimerThickness = 10,
-		TimerLength = 100, TimerSpacing = 0, TimerGrowUp = true, TimerFont = "Friz Quadrata TT",
-		TimerFontSize = 8, TimerBarSkin = "Blizzard", TimerScale = 1, TimerStrata = "LOW", Locked = true,
+		TimerEnabled = true, TimerType = 1, Locked = true,
+		DurationBars = BarSettings(), CooldownBars = BarSettings(),
+		-- saved before the groups had their own settings
+		TimerFontSize = 12,
 	},
 }
 function Yata:RegisterEvent(event, method) events[event] = method or event end
@@ -127,6 +137,11 @@ Yata.Bar = { Groups = { All = {
 
 helpers.compile("Timer.lua")("Yata", { Yata = Yata })
 Yata:InitTimer()
+
+-- Settings the groups used to share are copied into each group
+local db = Yata.CurrentDb
+check(db.TimerFontSize == nil, "the old shared setting is removed")
+check(db.DurationBars.FontSize == 12 and db.CooldownBars.FontSize == 12, "both groups take the old shared setting")
 
 local function fire(event, ...)
 	local handler = assert(events[event], event .. " is not registered")
@@ -183,16 +198,20 @@ noDuration = false
 secretValues = false
 
 -- Text outline and shadow options reach the bar text
-Yata.CurrentDb.TimerFontOutline = "THICKOUTLINE"
-Yata.CurrentDb.TimerFontShadow = true
+db.DurationBars.FontOutline = "THICKOUTLINE"
+db.DurationBars.FontShadow = true
 setSlot(1, "Searing Totem", 60, 3599)
 fire("PLAYER_TOTEM_UPDATE", 1)
 Yata:LoadTimerConfig()
 local time = durationBar(1).Time
 check(time.fontFlags == "THICKOUTLINE", "the outline option sets the font flags")
 check(time.shadowX == 1 and time.shadowY == -1, "the shadow option offsets the shadow")
-Yata.CurrentDb.TimerFontOutline = ""
-Yata.CurrentDb.TimerFontShadow = false
+local cooldownBar = Yata.CooldownGroup:AcquireBar("Searing Totem")
+check(cooldownBar.Time.fontFlags == "" and cooldownBar.Time.shadowX == 0,
+	"duration bar text options leave the cooldown bars alone")
+Yata.CooldownGroup:ReleaseBar("Searing Totem")
+db.DurationBars.FontOutline = ""
+db.DurationBars.FontShadow = false
 Yata:LoadTimerConfig()
 check(time.fontFlags == "", "no outline clears the font flags")
 check(time.shadowX == 0 and time.shadowY == 0, "no shadow hides the shadow")
@@ -201,10 +220,10 @@ check(time.shadowX == 0 and time.shadowY == 0, "no shadow hides the shadow")
 local binding = durationBar(1).Binding
 local longFormatter = binding.formatter
 check(longFormatter ~= nil, "bar text has a formatter")
-Yata.CurrentDb.TimerShortDuration = true
+db.DurationBars.ShortDuration = true
 Yata:LoadTimerConfig()
 check(binding.formatter ~= nil and binding.formatter ~= longFormatter, "the short duration option swaps the formatter")
-Yata.CurrentDb.TimerShortDuration = false
+db.DurationBars.ShortDuration = false
 Yata:LoadTimerConfig()
 check(binding.formatter == longFormatter, "turning short durations off restores the formatter")
 

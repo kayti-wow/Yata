@@ -27,6 +27,25 @@ ns.SPELL_GROUP_IMBUE = SPELL_GROUP_IMBUE
 ns.SpellGroups = SpellGroups
 ns.ElementsMap = ElementsMap
 
+-- The duration and cooldown bars each have their own copy of these
+local function TimerBarDefaults()
+	return {
+		Scale = 1.0,
+		Orientation = 1,
+		Thickness = 10,
+		Length = 100,
+		FontSize = 8,
+		Font = "Friz Quadrata TT",
+		FontOutline = "",
+		FontShadow = false,
+		ShortDuration = false,
+		Spacing = 0,
+		GrowUp = true,
+		Strata = "LOW",
+		BarSkin = "Blizzard",
+	}
+end
+
 local defaults = {
 	profile = {
 		AdvancedEnabled = false,
@@ -46,19 +65,8 @@ local defaults = {
 		Tooltip = 3,
 		TimerEnabled = true,
 		TimerType = 1,
-		TimerScale = 1.0,
-		TimerOrientation = 1,
-		TimerThickness = 10,
-		TimerLength = 100,
-		TimerFontSize = 8,
-		TimerFont = "Friz Quadrata TT",
-		TimerFontOutline = "",
-		TimerFontShadow = false,
-		TimerShortDuration = false,
-		TimerSpacing = 0,
-		TimerGrowUp = true,
-		TimerStrata = "LOW",
-		TimerBarSkin = "Blizzard",
+		DurationBars = TimerBarDefaults(),
+		CooldownBars = TimerBarDefaults(),
 		MacroResetKey = "none",
 		ButtonSetCallKey = "alt",
 		ButtonSwapKey = "ctrl",
@@ -92,20 +100,9 @@ local defaults = {
 			Tooltip = 3,
 			TimerEnabled = true,
 			TimerType = 1,
-			TimerScale = 1.0,
-			TimerOrientation = 1,
-			TimerThickness = 10,
-			TimerLength = 100,
-			TimerFontSize = 8,
-			TimerFont = "Friz Quadrata TT",
-			TimerFontOutline = "",
-			TimerFontShadow = false,
-			TimerShortDuration = false,
-			TimerSpacing = 0,
-			TimerGrowUp = true,
-			TimerStrata = "LOW",
+			DurationBars = TimerBarDefaults(),
+			CooldownBars = TimerBarDefaults(),
 			MultiTooltip = true,
-			TimerBarSkin = "Blizzard",
 			MacroResetKey = "none",
 			ButtonSetCallKey = "alt",
 			ButtonSwapKey = "ctrl",
