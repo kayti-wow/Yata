@@ -108,7 +108,7 @@ C_Spell = {
 local events = {}
 -- As in AceDB, defaults show through a metatable until a setting is changed
 local barDefaults = {
-	Orientation = 1, Thickness = 10, Length = 100, Spacing = 0, GrowUp = true,
+	Show = true, Orientation = 1, Thickness = 10, Length = 100, Spacing = 0, GrowUp = true,
 	Font = "Friz Quadrata TT", FontSize = 8, FontOutline = "", FontShadow = false,
 	ShortDuration = false, BarSkin = "Blizzard", Scale = 1, Strata = "LOW",
 }
@@ -226,5 +226,13 @@ check(binding.formatter ~= nil and binding.formatter ~= longFormatter, "the shor
 db.DurationBars.ShortDuration = false
 Yata:LoadTimerConfig()
 check(binding.formatter == longFormatter, "turning short durations off restores the formatter")
+
+-- Each group of bars can be hidden on its own
+db.DurationBars.Show = false
+Yata:ResetTimers()
+check(not visible(durationBar(1)), "hidden duration bars: a totem that is down has no bar")
+db.DurationBars.Show = nil
+Yata:ResetTimers()
+check(visible(durationBar(1)), "shown duration bars: a totem that is down has a bar")
 
 helpers.finish()

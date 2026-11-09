@@ -30,6 +30,7 @@ ns.ElementsMap = ElementsMap
 -- The duration and cooldown bars each have their own copy of these
 local function TimerBarDefaults()
 	return {
+		Show = true,
 		Scale = 1.0,
 		Orientation = 1,
 		Thickness = 10,

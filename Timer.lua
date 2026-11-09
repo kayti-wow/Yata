@@ -38,8 +38,10 @@ local castTotems = {}     -- totem slot -> spell id we last saw the player cast 
 local coolingDown = {}    -- button -> true while its spell is on cooldown
 local cooldownTicker
 
-local function ShowsBars()
-	return Yata.CurrentDb.TimerType == TIMER_BARS or Yata.CurrentDb.TimerType == TIMER_BOTH
+-- key is the group's settings table: "DurationBars" or "CooldownBars"
+local function ShowsBars(key)
+	local db = Yata.CurrentDb
+	return (db.TimerType == TIMER_BARS or db.TimerType == TIMER_BOTH) and db[key].Show
 end
 
 local function ShowsButtons()
@@ -123,6 +125,8 @@ function BarGroup:Configure(settings)
 
 	self.Anchor:SetScale(settings.Scale)
 	self.Anchor:SetFrameStrata(settings.Strata)
+	-- Hidden groups keep their anchor frame laid out, so others can still anchor to it
+	self.Anchor:SetShown(settings.Show)
 	if self.Horizontal then
 		self.Anchor:SetSize(self.Length + self.Thickness, math.max(self.Thickness, 12))
 	else
@@ -479,7 +483,7 @@ function Yata:UpdateTotemSlot(slot)
 	-- restriction lifts), and the timer widgets reject a missing duration
 	local duration = GetTotemDuration(slot)
 
-	if ShowsBars() then
+	if ShowsBars("DurationBars") then
 		if duration and (secret or haveTotem) then
 			local bar = self.DurationGroup:AcquireBar(slot)
 			local color = ElementColors[button and button.Totem.SpellGroup] or ElementColors.Earth
@@ -525,7 +529,7 @@ function Yata:UpdateButtonCooldown(button)
 	local duration = onCooldown and C_Spell.GetSpellCooldownDuration(totem.Name, true)
 	coolingDown[button] = onCooldown or nil
 
-	if ShowsBars() then
+	if ShowsBars("CooldownBars") then
 		if duration then
 			local bar = self.CooldownGroup:AcquireBar(totem.Name)
 			SetupBar(bar, totem.Name, totem.Texture, duration, CooldownColor)

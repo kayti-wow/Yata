@@ -34,13 +34,27 @@ local function TimerBarOptions(dbKey, name, desc, order)
 		end
 	end
 
+	local function timersDisabled()
+		return InCombatLockdown() or Yata.CurrentDb.TimerEnabled == false or Yata.CurrentDb.TimerType == 2
+	end
+
 	local group = {
 		name = name,
 		desc = desc,
 		type = "group",
 		order = order,
-		disabled = function() return (InCombatLockdown() or Yata.CurrentDb.TimerEnabled == false or Yata.CurrentDb.TimerType == 2) end,
+		disabled = function() return timersDisabled() or not settings().Show end,
 		args = {
+			Show = {
+				name = L["TimerShowBars"],
+				desc = L["TimerShowBarsDesc"],
+				type = "toggle",
+				width = "full",
+				get = get,
+				set = set,
+				disabled = timersDisabled,
+				order = 0,
+			},
 			Orientation = {
 				name = L["TimerOrientation"],
 				desc = L["TimerOrientationDesc"],
