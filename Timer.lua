@@ -28,6 +28,11 @@ local CooldownColor = { 1.0, 0.65, 0.0 }
 
 local durationFormatter = C_StringUtil.CreateSecondsFormatter()
 
+-- "1.5s" rather than "1.5 seconds"
+local shortDurationFormatter = C_StringUtil.CreateSecondsFormatter()
+shortDurationFormatter:SetDefaultAbbreviation(Enum.SecondsFormatterAbbreviation.OneLetter)
+shortDurationFormatter:SetStripIntervalWhitespace(Enum.SecondsFormatterIntervalWhitespace.Strip)
+
 local activeTotems = {}   -- totem slot -> button whose totem is down in that slot
 local castTotems = {}     -- totem slot -> spell id we last saw the player cast for that slot
 local coolingDown = {}    -- button -> true while its spell is on cooldown
@@ -112,6 +117,7 @@ function BarGroup:Configure(db)
 	self.FontSize = db.TimerFontSize
 	self.FontOutline = db.TimerFontOutline or ""
 	self.FontShadow = db.TimerFontShadow
+	self.Formatter = db.TimerShortDuration and shortDurationFormatter or durationFormatter
 	self.Texture = LSM and LSM:Fetch("statusbar", db.TimerBarSkin, true) or "Interface\\TargetingFrame\\UI-StatusBar"
 
 	self.Anchor:SetScale(db.TimerScale)
@@ -144,7 +150,6 @@ function BarGroup:CreateBar()
 
 	bar.Binding = C_DurationUtil.CreateDurationTextBinding()
 	bar.Binding:SetFontString(bar.Time)
-	bar.Binding:SetFormatter(durationFormatter)
 
 	self:StyleBar(bar)
 	return bar
@@ -154,6 +159,7 @@ function BarGroup:StyleBar(bar)
 	bar:SetStatusBarTexture(self.Texture)
 	bar:SetOrientation(self.Horizontal and "HORIZONTAL" or "VERTICAL")
 	bar:SetReverseFill(self.Reverse)
+	bar.Binding:SetFormatter(self.Formatter)
 
 	for _, text in ipairs({ bar.Label, bar.Time }) do
 		if not text:SetFont(self.Font, self.FontSize, self.FontOutline) then

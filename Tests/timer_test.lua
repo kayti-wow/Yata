@@ -31,6 +31,7 @@ function Widget:SetFont(font, size, flags)
 	return true
 end
 function Widget:SetShadowOffset(x, y) self.shadowX, self.shadowY = x, y end
+function Widget:SetFormatter(formatter) self.formatter = formatter end
 function Widget:GetLeft() return 0 end
 function Widget:GetBottom() return 0 end
 
@@ -48,6 +49,8 @@ Enum = {
 	StatusBarInterpolation = { Immediate = 0 },
 	StatusBarTimerDirection = { RemainingTime = 1 },
 	AddOnRestrictionState = { Inactive = 0, Activating = 1, Active = 2 },
+	SecondsFormatterAbbreviation = { None = 0, Truncate = 1, OneLetter = 2 },
+	SecondsFormatterIntervalWhitespace = { Preserve = 0, Strip = 1, StripIgnoreLocale = 2 },
 }
 function wipe(t)
 	for k in pairs(t) do t[k] = nil end
@@ -63,7 +66,7 @@ function CopyTable(t)
 	for k, v in pairs(t) do copy[k] = v end
 	return copy
 end
-C_StringUtil = { CreateSecondsFormatter = function() return {} end }
+C_StringUtil = { CreateSecondsFormatter = function() return Widget.new("SecondsFormatter") end }
 C_DurationUtil = { CreateDurationTextBinding = function() return Widget.new("Binding") end }
 C_Timer = { NewTicker = function() return { Cancel = function() end } end }
 function GetActionInfo() return nil end
@@ -193,5 +196,16 @@ Yata.CurrentDb.TimerFontShadow = false
 Yata:LoadTimerConfig()
 check(time.fontFlags == "", "no outline clears the font flags")
 check(time.shadowX == 0 and time.shadowY == 0, "no shadow hides the shadow")
+
+-- Short durations switch the bar text to a different formatter
+local binding = durationBar(1).Binding
+local longFormatter = binding.formatter
+check(longFormatter ~= nil, "bar text has a formatter")
+Yata.CurrentDb.TimerShortDuration = true
+Yata:LoadTimerConfig()
+check(binding.formatter ~= nil and binding.formatter ~= longFormatter, "the short duration option swaps the formatter")
+Yata.CurrentDb.TimerShortDuration = false
+Yata:LoadTimerConfig()
+check(binding.formatter == longFormatter, "turning short durations off restores the formatter")
 
 helpers.finish()
