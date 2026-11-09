@@ -75,13 +75,19 @@ local function CreateBarGroup(name, label, x, y)
 	anchor.Label:SetPoint("CENTER")
 	anchor.Label:SetText(label)
 
-	anchor:SetScript("OnDragStart", anchor.StartMoving)
+	local group = setmetatable({ Anchor = anchor, Bars = {}, Order = {}, Unused = {}, DefaultX = x, DefaultY = y }, BarGroup)
+
+	-- A group anchored to something else is moved with its offsets instead
+	anchor:SetScript("OnDragStart", function(self)
+		if not group.Anchored then
+			self:StartMoving()
+		end
+	end)
 	anchor:SetScript("OnDragStop", function(self)
 		self:StopMovingOrSizing()
 		Yata:SaveTimerConfig()
 	end)
 
-	local group = setmetatable({ Anchor = anchor, Bars = {}, Order = {}, Unused = {} }, BarGroup)
 	group:HideAnchor()
 	return group
 end
@@ -105,6 +111,11 @@ end
 
 function BarGroup:GetPosition()
 	return self.Anchor:GetLeft(), self.Anchor:GetBottom()
+end
+
+function BarGroup:AnchorTo(relativeTo, settings)
+	self.Anchor:ClearAllPoints()
+	self.Anchor:SetPoint(settings.AnchorPoint, relativeTo, settings.RelativePoint, settings.OffsetX, settings.OffsetY)
 end
 
 -- settings is the group's own table: CurrentDb.DurationBars or CurrentDb.CooldownBars
@@ -271,6 +282,39 @@ end
 -- Setup and configuration
 --
 
+-- The totem bar is a secure frame, and a frame anchored to it can't be moved
+-- in combat, which would stop us adding bars. So timer groups anchor to this
+-- stand-in instead, which copies the totem bar's position when that changes.
+local totemBarMirror = CreateFrame("Frame", nil, UIParent)
+
+function Yata:SyncTotemBarMirror(bar)
+	bar = bar or self.Bar
+	local left, bottom, width, height
+	if bar then
+		left, bottom, width, height = bar:GetRect()
+	end
+	if not left then
+		return
+	end
+	local scale = bar:GetEffectiveScale() / UIParent:GetEffectiveScale()
+	totemBarMirror:ClearAllPoints()
+	totemBarMirror:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", left * scale, bottom * scale)
+	totemBarMirror:SetSize(width * scale, height * scale)
+end
+
+-- Keeps the stand-in on the totem bar while the bar is dragged
+function Yata:FollowTotemBar(follow)
+	totemBarMirror:SetScript("OnUpdate", follow and function() Yata:SyncTotemBarMirror() end or nil)
+end
+
+local function GroupFor(key)
+	if key == "DurationBars" then
+		return Yata.DurationGroup
+	elseif key == "CooldownBars" then
+		return Yata.CooldownGroup
+	end
+end
+
 function Yata:InitTimer()
 	if not self.DurationGroup then
 		self.DurationGroup = CreateBarGroup("Uptime", "Totem Uptime", 200, 200)
@@ -290,10 +334,22 @@ function Yata:SaveTimerConfig()
 	if not self.DurationGroup then
 		return
 	end
-	local x, y = self.DurationGroup:GetPosition()
-	self.CurrentDb.DurationGroupPosition = { x = x, y = y }
-	x, y = self.CooldownGroup:GetPosition()
-	self.CurrentDb.CooldownGroupPosition = { x = x, y = y }
+	local db = self.CurrentDb
+	-- Only groups placed on the screen have a position of their own. One that
+	-- has just been switched to the screen saves where it was anchored, so it
+	-- stays put.
+	if db.DurationBars.AnchorTo == "SCREEN" then
+		local x, y = self.DurationGroup:GetPosition()
+		if x then
+			db.DurationGroupPosition = { x = x, y = y }
+		end
+	end
+	if db.CooldownBars.AnchorTo == "SCREEN" then
+		local x, y = self.CooldownGroup:GetPosition()
+		if x then
+			db.CooldownGroupPosition = { x = x, y = y }
+		end
+	end
 end
 
 -- Bar settings used to be shared by both groups, as TimerScale, TimerFont and
@@ -317,15 +373,60 @@ local function MigrateTimerSettings(db)
 	end
 end
 
+-- The frame a group anchors to, or nil when it sits on the screen by itself.
+-- resolved holds the targets already worked out for the other groups.
+local function AnchorTarget(key, resolved)
+	local db = Yata.CurrentDb
+	local target = db[key].AnchorTo
+	if target == "TOTEMBAR" then
+		return totemBarMirror
+	end
+	local other = GroupFor(target)
+	if not other or target == key then
+		return nil
+	end
+	-- Two groups anchored to each other would be a loop, so the first falls
+	-- back to the screen and the second follows it
+	local otherTarget = resolved[target]
+	if otherTarget == nil and db[target].AnchorTo == key then
+		return nil
+	end
+	if otherTarget ~= GroupFor(key).Anchor then
+		return other.Anchor
+	end
+end
+
+local function PositionGroups()
+	local db = Yata.CurrentDb
+	local placements = {
+		{ key = "DurationBars", saved = db.DurationGroupPosition },
+		{ key = "CooldownBars", saved = db.CooldownGroupPosition },
+	}
+	-- Work out every target and clear every group first, so none is still
+	-- anchored to a group that is about to anchor to it
+	local resolved = {}
+	for _, place in ipairs(placements) do
+		place.group, place.target = GroupFor(place.key), AnchorTarget(place.key, resolved)
+		resolved[place.key] = place.target or false
+		place.group.Anchored = place.target ~= nil
+		place.group.Anchor:ClearAllPoints()
+	end
+	for _, place in ipairs(placements) do
+		if place.target then
+			place.group:AnchorTo(place.target, db[place.key])
+		elseif place.saved then
+			place.group:SetPosition(place.saved.x, place.saved.y)
+		else
+			place.group:SetPosition(place.group.DefaultX, place.group.DefaultY)
+		end
+	end
+end
+
 function Yata:LoadTimerConfig()
 	local db = self.CurrentDb
 	MigrateTimerSettings(db)
-	if db.DurationGroupPosition then
-		self.DurationGroup:SetPosition(db.DurationGroupPosition.x, db.DurationGroupPosition.y)
-	end
-	if db.CooldownGroupPosition then
-		self.CooldownGroup:SetPosition(db.CooldownGroupPosition.x, db.CooldownGroupPosition.y)
-	end
+	self:SyncTotemBarMirror()
+	PositionGroups()
 	if db.Locked then
 		self.DurationGroup:HideAnchor()
 		self.CooldownGroup:HideAnchor()

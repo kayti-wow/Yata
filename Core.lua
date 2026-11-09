@@ -44,6 +44,11 @@ local function TimerBarDefaults()
 		GrowUp = true,
 		Strata = "LOW",
 		BarSkin = "Blizzard",
+		AnchorTo = "SCREEN", -- or "TOTEMBAR", or the other group's key
+		AnchorPoint = "BOTTOMLEFT",
+		RelativePoint = "TOPLEFT",
+		OffsetX = 0,
+		OffsetY = 0,
 	}
 end
 

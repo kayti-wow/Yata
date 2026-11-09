@@ -12,6 +12,16 @@ local L = LibStub("AceLocale-3.0"):GetLocale("Yata")
 local resetkeys = {"shift", "ctrl", "alt", "none"}
 local stratum = {"LOW", "MEDIUM", "HIGH"}
 local fontOutlines = {"", "OUTLINE", "THICKOUTLINE"}
+local anchorPoints = {
+	"TOPLEFT", "TOP", "TOPRIGHT",
+	"LEFT", "CENTER", "RIGHT",
+	"BOTTOMLEFT", "BOTTOM", "BOTTOMRIGHT",
+}
+local anchorPointNames = {
+	TOPLEFT = L["PointTopLeft"], TOP = L["PointTop"], TOPRIGHT = L["PointTopRight"],
+	LEFT = L["PointLeft"], CENTER = L["PointCenter"], RIGHT = L["PointRight"],
+	BOTTOMLEFT = L["PointBottomLeft"], BOTTOM = L["PointBottom"], BOTTOMRIGHT = L["PointBottomRight"],
+}
 
 -- Options for one group of timer bars. Each option is keyed by the setting it
 -- changes in that group's table, CurrentDb[dbKey].
@@ -38,12 +48,20 @@ local function TimerBarOptions(dbKey, name, desc, order)
 		return InCombatLockdown() or Yata.CurrentDb.TimerEnabled == false or Yata.CurrentDb.TimerType == 2
 	end
 
+	local function groupDisabled()
+		return timersDisabled() or not settings().Show
+	end
+	-- Points and offsets only apply when the bars are anchored to something
+	local function anchorDisabled()
+		return groupDisabled() or settings().AnchorTo == "SCREEN"
+	end
+
 	local group = {
 		name = name,
 		desc = desc,
 		type = "group",
 		order = order,
-		disabled = function() return timersDisabled() or not settings().Show end,
+		disabled = groupDisabled,
 		args = {
 			Show = {
 				name = L["TimerShowBars"],
@@ -167,6 +185,89 @@ local function TimerBarOptions(dbKey, name, desc, order)
 				get = get,
 				set = set,
 				order = 13,
+			},
+			position = {
+				name = L["TimerPosition"],
+				type = "header",
+				order = 20,
+			},
+			AnchorTo = {
+				name = L["TimerAnchorTo"],
+				desc = L["TimerAnchorToDesc"],
+				type = "select",
+				width = "double",
+				values = function()
+					local targets = {
+						SCREEN = L["TimerAnchorScreen"],
+						TOTEMBAR = L["TimerAnchorTotemBar"],
+						DurationBars = L["TimerDurationBars"],
+						CooldownBars = L["TimerCooldownBars"],
+					}
+					targets[dbKey] = nil
+					return targets
+				end,
+				sorting = function()
+					local sorted = {}
+					for _, target in ipairs({ "SCREEN", "TOTEMBAR", "DurationBars", "CooldownBars" }) do
+						if target ~= dbKey then
+							table.insert(sorted, target)
+						end
+					end
+					return sorted
+				end,
+				get = get,
+				set = set,
+				order = 21,
+			},
+			AnchorPoint = {
+				name = L["TimerAnchorPoint"],
+				desc = L["TimerAnchorPointDesc"],
+				type = "select",
+				values = anchorPointNames,
+				sorting = anchorPoints,
+				get = get,
+				set = set,
+				disabled = anchorDisabled,
+				order = 22,
+			},
+			RelativePoint = {
+				name = L["TimerRelativePoint"],
+				desc = L["TimerRelativePointDesc"],
+				type = "select",
+				values = anchorPointNames,
+				sorting = anchorPoints,
+				get = get,
+				set = set,
+				disabled = anchorDisabled,
+				order = 23,
+			},
+			OffsetX = {
+				name = L["TimerOffsetX"],
+				desc = L["TimerOffsetDesc"],
+				type = "range",
+				min = -500,
+				max = 500,
+				softMin = -100,
+				softMax = 100,
+				step = 1,
+				get = get,
+				set = set,
+				disabled = anchorDisabled,
+				order = 24,
+			},
+			OffsetY = {
+				name = L["TimerOffsetY"],
+				desc = L["TimerOffsetDesc"],
+				type = "range",
+				min = -500,
+				max = 500,
+				softMin = -100,
+				softMax = 100,
+				step = 1,
+				get = get,
+				set = set,
+				disabled = anchorDisabled,
+				order = 25,
 			},
 		},
 	}
@@ -358,6 +459,7 @@ function Yata:PopulateOptions()
 						set = function(info, value)
 							self.CurrentDb.BarScale = value 
 							self.Bar:SetScale(self.CurrentDb.BarScale)
+							self:SyncTotemBarMirror()
 						end,
 						min = 0.5,
 						max = 2.5,

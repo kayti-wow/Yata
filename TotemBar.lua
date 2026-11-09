@@ -236,11 +236,14 @@ function TotemBar:Init()
 	self:SetScript("OnDragStart", function()
 		if(not Yata.CurrentDb.Locked) then
 			self:StartMoving()
+			Yata:FollowTotemBar(true)
 		end
 	end)
 	self:SetScript("OnDragStop", function()
 		self:StopMovingOrSizing()
+		Yata:FollowTotemBar(false)
 		self:SaveBarConfig()
+		Yata:SyncTotemBarMirror(self)
 	end)	
 	
 	self.Groups = {["All"] = {},
@@ -340,6 +343,7 @@ function TotemBar:LoadPosition()
 	self:ClearAllPoints()
 	self:SetPoint("BOTTOMLEFT", UIParent,"BOTTOMLEFT", x, y)
 	self:SetScale(Yata.CurrentDb.BarScale)	
+	Yata:SyncTotemBarMirror(self)
 end
 
 function TotemBar:SaveBarConfig()
@@ -426,6 +430,7 @@ function TotemBar:ConfigureBarDisplay(gapValue, orientationValue, visibleValue)
 	end
 	
 	self:SetAlpha(Yata.CurrentDb.Alpha or 1)
+	Yata:SyncTotemBarMirror(self)
 end
 
 function TotemBar:UpdateAllButtons(spellgroup)

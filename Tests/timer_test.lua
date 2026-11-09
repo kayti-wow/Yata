@@ -32,6 +32,11 @@ function Widget:SetFont(font, size, flags)
 end
 function Widget:SetShadowOffset(x, y) self.shadowX, self.shadowY = x, y end
 function Widget:SetFormatter(formatter) self.formatter = formatter end
+function Widget:SetPoint(point, relativeTo, relativePoint, x, y)
+	self.anchor = { point = point, relativeTo = relativeTo, relativePoint = relativePoint, x = x, y = y }
+end
+function Widget:ClearAllPoints() self.anchor = nil end
+function Widget:GetEffectiveScale() return 1 end
 function Widget:GetLeft() return 0 end
 function Widget:GetBottom() return 0 end
 
@@ -111,6 +116,7 @@ local barDefaults = {
 	Show = true, Orientation = 1, Thickness = 10, Length = 100, Spacing = 0, GrowUp = true,
 	Font = "Friz Quadrata TT", FontSize = 8, FontOutline = "", FontShadow = false,
 	ShortDuration = false, BarSkin = "Blizzard", Scale = 1, Strata = "LOW",
+	AnchorTo = "SCREEN", AnchorPoint = "BOTTOMLEFT", RelativePoint = "TOPLEFT", OffsetX = 0, OffsetY = 0,
 }
 local function BarSettings()
 	return setmetatable({}, { __index = barDefaults })
@@ -130,10 +136,12 @@ local function TotemButton(name, id, slot, group)
 		Cooldown = Widget.new("Cooldown"),
 	}
 end
-Yata.Bar = { Groups = { All = {
+Yata.Bar = Widget.new("Frame")
+function Yata.Bar:GetRect() return 300, 100, 216, 36 end
+Yata.Bar.Groups = { All = {
 	TotemButton("Searing Totem", 3599, 1, "Fire"),
 	TotemButton("Stoneskin Totem", 8071, 2, "Earth"),
-} } }
+} }
 
 helpers.compile("Timer.lua")("Yata", { Yata = Yata })
 Yata:InitTimer()
@@ -226,6 +234,43 @@ check(binding.formatter ~= nil and binding.formatter ~= longFormatter, "the shor
 db.DurationBars.ShortDuration = false
 Yata:LoadTimerConfig()
 check(binding.formatter == longFormatter, "turning short durations off restores the formatter")
+
+-- Groups start on the screen
+local durationAnchor, cooldownAnchor = Yata.DurationGroup.Anchor, Yata.CooldownGroup.Anchor
+check(durationAnchor.anchor.relativeTo == UIParent and cooldownAnchor.anchor.relativeTo == UIParent,
+	"both groups start on the screen")
+
+-- A group can anchor to the other group
+db.CooldownBars.AnchorTo = "DurationBars"
+db.CooldownBars.AnchorPoint = "TOPLEFT"
+db.CooldownBars.RelativePoint = "BOTTOMLEFT"
+db.CooldownBars.OffsetY = -4
+Yata:ResetTimers()
+local a = cooldownAnchor.anchor
+check(a.relativeTo == durationAnchor and a.point == "TOPLEFT" and a.relativePoint == "BOTTOMLEFT" and a.y == -4,
+	"cooldown bars anchor to the duration bars with the chosen points and offset")
+
+-- Anchoring both groups to each other would be a loop
+db.DurationBars.AnchorTo = "CooldownBars"
+Yata:ResetTimers()
+check(durationAnchor.anchor.relativeTo == UIParent, "in a loop, the first group falls back to the screen")
+check(cooldownAnchor.anchor.relativeTo == durationAnchor, "in a loop, the second group still follows the first")
+
+-- A group can anchor to the totem bar, through a stand-in that copies its position
+db.DurationBars.AnchorTo = "TOTEMBAR"
+Yata:ResetTimers()
+local mirror = durationAnchor.anchor.relativeTo
+check(mirror ~= UIParent and mirror ~= Yata.Bar, "duration bars anchor to a stand-in, not the secure totem bar")
+check(mirror.anchor and mirror.anchor.x == 300 and mirror.anchor.y == 100, "the stand-in sits where the totem bar is")
+check(cooldownAnchor.anchor.relativeTo == durationAnchor, "cooldown bars follow the duration bars to the totem bar")
+
+-- Back on the screen, a group stays where it was anchored
+db.DurationBars.AnchorTo = nil
+db.CooldownBars.AnchorTo = nil
+db.CooldownBars.OffsetY = nil
+Yata:ResetTimers()
+check(durationAnchor.anchor.relativeTo == UIParent and cooldownAnchor.anchor.relativeTo == UIParent,
+	"both groups go back on the screen")
 
 -- Each group of bars can be hidden on its own
 db.DurationBars.Show = false
